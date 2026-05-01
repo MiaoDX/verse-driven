@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MiaoDX/verse-driven/internal/schema/verse.schema.json",
+  "title": "Verse",
+  "description": "A single verse entry. The contract every pack builder must satisfy. See plan.md §6.1.",
+  "type": "object",
+  "required": [
+    "id",
+    "tradition",
+    "lang",
+    "text",
+    "canonical_ref",
+    "source",
+    "checksum_sha256"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable dotted identifier, e.g. bible.kjv.john.3.16",
+      "pattern": "^[a-z0-9]+(\\.[a-z0-9]+)+$"
+    },
+    "tradition": {
+      "type": "string",
+      "description": "Tradition slug: bible, dao, sutra, quran, ...",
+      "minLength": 1
+    },
+    "lang": {
+      "type": "string",
+      "description": "BCP-47 language tag (en, zh-CN, ar, ...)",
+      "minLength": 2
+    },
+    "work": {
+      "type": "string",
+      "description": "Edition/translation identifier inside the tradition (KJV, daodejing, ...)"
+    },
+    "canonical_ref": {
+      "type": "object",
+      "description": "Normalized reference. book is optional for traditions that have only one work.",
+      "required": ["chapter", "verse_start"],
+      "additionalProperties": false,
+      "properties": {
+        "book": { "type": "string" },
+        "chapter": { "type": "integer", "minimum": 1 },
+        "verse_start": { "type": "integer", "minimum": 1 },
+        "verse_end": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "display_ref": {
+      "type": "object",
+      "description": "Per-language display strings, keyed by BCP-47 tag.",
+      "additionalProperties": { "type": "string" }
+    },
+    "text": {
+      "type": "string",
+      "description": "Verbatim verse text.",
+      "minLength": 1
+    },
+    "source": {
+      "type": "object",
+      "required": ["provider", "license", "attribution"],
+      "additionalProperties": false,
+      "properties": {
+        "provider": { "type": "string", "minLength": 1 },
+        "license": { "type": "string", "minLength": 1 },
+        "attribution": { "type": "string", "minLength": 1 }
+      }
+    },
+    "checksum_sha256": {
+      "type": "string",
+      "description": "Lowercase hex SHA-256 of the verse text bytes.",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "inclusion_mode": {
+      "type": "string",
+      "enum": ["bundled", "api_only"]
+    },
+    "sensitivity": {
+      "type": "string",
+      "enum": ["sacred_exact_quote"]
+    }
+  }
+}
