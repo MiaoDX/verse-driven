@@ -335,24 +335,28 @@ Quote verbatim if you mention it. Do not preach.
 
 ## 7. 开发路线图
 
-### Week 1：核心 + Claude
+工作拆成 9 个 issue，按依赖关系排序，详见
+[`docs/issues-backlog.md`](./docs/issues-backlog.md)。摘要：
 
-| Day | 任务 |
-|---|---|
-| 1–2 | Go 项目骨架；verse schema；resolver；KJV/道德经/心经 三个 pack 的 builder |
-| 3 | stdio MCP server；CLI lookup；checksum 验证 |
-| 4 | Claude `UserPromptExpansion` hook（Mode A）；preview / confirm 流程 |
-| 5 | Claude output style + Stop hook（Mode B）；终端 recap |
-
-### Week 2：Codex + 测试 + 打磨
-
-| Day | 任务 |
-|---|---|
-| 6 | Codex skill + `UserPromptSubmit` hook（Mode A）；marker 语法 `[[bible:...]]` |
-| 7 | Codex shell wrapper `cdx`（Mode B）；统一 install.sh |
-| 8 | 测试矩阵（见下） |
-| 9 | UX：中文引用别名；first-letter memory 模式；失败回退文案 |
-| 10 | README + GIF + benchmark；准备发布 |
+```
+                     #1 (foundation skeleton)
+                    /  \
+                   v    v
+                  #2   #3   ← resolver / packs (parallel)
+                    \  /
+                     v
+                     #4    ← MCP server + CLI
+                    /  \
+                   v    v
+                  #5    #6  ← claude / codex adapters (parallel)
+                    \  /
+                  ┌──┴──┐
+                  v     v
+                  #7    #8  ← install / critical tests (parallel)
+                    \  /
+                     v
+                     #9    ← polish + launch
+```
 
 ---
 
@@ -499,9 +503,9 @@ Quote verbatim if you mention it. Do not preach.
 
 ---
 
-## 12. Day-1 验收标准
+## 12. v0.1 验收标准
 
-PoC 第一周结束时，下面五件事必须全部跑通：
+下面五件事必须全部跑通才算 v0.1 可发布：
 
 1. `scripture-mcp serve` 在 macOS / Linux 都能启动
 2. Claude Code 里输入 `/bible John 3:16`，弹出 preview 卡片

@@ -152,8 +152,9 @@ scripture-mcp init --target=codex
 
 ## Roadmap
 
-See [`plan.md`](./plan.md) for the full design and two-week PoC plan.
-Day-1 acceptance criteria:
+See [`plan.md`](./plan.md) for the full design and
+[`docs/issues-backlog.md`](./docs/issues-backlog.md) for the 9-issue work
+plan. v0.1 acceptance criteria:
 
 1. ✅ `scripture-mcp serve` runs on macOS and Linux
 2. ✅ `/bible John 3:16` in Claude Code shows a preview card
