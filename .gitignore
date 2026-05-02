@@ -4,3 +4,5 @@ bin/
 *.out
 .DS_Store
 .bench-scratch/
+__pycache__/
+*.pyc

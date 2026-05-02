@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -104,16 +105,56 @@ func TestBenchPackStructure(t *testing.T) {
 	}
 }
 
-// TestBenchTemplateFixtureExists checks that the one vendored fixture
-// referenced by the pack is actually present and has the expected
-// shape (source file + test file). This locks in the convention so
-// future fixture additions follow it.
-func TestBenchTemplateFixtureExists(t *testing.T) {
-	dir := repoFile(t, "docs/benchmarks/fixtures/bugfix-off-by-one")
-	for _, f := range []string{"windows.py", "test_windows.py", "README.md"} {
-		path := filepath.Join(dir, f)
-		if _, err := os.Stat(path); err != nil {
-			t.Errorf("template fixture missing %s: %v", f, err)
+// TestBenchFixturesPresent confirms every fixture referenced by
+// docs/benchmarks/tasks.json is actually vendored under
+// docs/benchmarks/fixtures/<id>/ with at least the three required
+// files: a README, a source file, and a pytest acceptance file.
+//
+// This is the regression net for the issue #8 acceptance criterion
+// "task pack of 10 representative coding tasks". Adding a task to
+// tasks.json without vendoring the fixture (or vice versa) fails CI.
+func TestBenchFixturesPresent(t *testing.T) {
+	path := repoFile(t, "docs/benchmarks/tasks.json")
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	var pack taskPack
+	if err := json.Unmarshal(body, &pack); err != nil {
+		t.Fatalf("parse %s: %v", path, err)
+	}
+	for _, task := range pack.Tasks {
+		dir := repoFile(t, filepath.Join("docs/benchmarks", task.FixtureDir))
+		if _, err := os.Stat(dir); err != nil {
+			t.Errorf("task %s: fixture dir missing: %v", task.ID, err)
+			continue
+		}
+		readme := filepath.Join(dir, "README.md")
+		if _, err := os.Stat(readme); err != nil {
+			t.Errorf("task %s: README.md missing", task.ID)
+		}
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			t.Errorf("task %s: read dir: %v", task.ID, err)
+			continue
+		}
+		var hasSource, hasTest bool
+		for _, e := range entries {
+			name := e.Name()
+			if !strings.HasSuffix(name, ".py") {
+				continue
+			}
+			if strings.HasPrefix(name, "test_") {
+				hasTest = true
+			} else {
+				hasSource = true
+			}
+		}
+		if !hasSource {
+			t.Errorf("task %s: no non-test .py source file in fixture", task.ID)
+		}
+		if !hasTest {
+			t.Errorf("task %s: no test_*.py acceptance file in fixture", task.ID)
 		}
 	}
 }
