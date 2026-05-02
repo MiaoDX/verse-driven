@@ -133,20 +133,46 @@ This single-binary / multi-interface design follows the pattern from
 
 ---
 
-## Install (planned)
+## Install
+
+One line:
 
 ```bash
-brew install verse-driven
-# or
 curl -fsSL https://raw.githubusercontent.com/MiaoDX/verse-driven/main/install.sh | bash
-
-# wire it into your coding agents
-scripture-mcp init --target=claude-code
-scripture-mcp init --target=codex
 ```
 
-`init` merges config snippets into your existing `settings.json` /
-`config.toml` — it does not overwrite your config.
+What it does:
+
+1. Detects your OS (macOS / Linux) and arch (arm64 / x86_64), downloads
+   the matching `scripture-mcp` release binary, and installs it to
+   `~/.local/bin/scripture-mcp` (override with `--prefix`).
+2. Detects which coding agents are on `$PATH` (`claude`, `codex`) and
+   wires each by calling `scripture-mcp init --target=<agent>`. The
+   prompt reads from `/dev/tty`, so it still works under `curl | bash`;
+   pass `--yes` to skip confirmation.
+3. Re-running upgrades the binary in place; `init` is idempotent on
+   configs (it splices a marker-fenced block, never overwrites your
+   settings).
+
+Useful flags:
+
+```bash
+install.sh --version v0.1.0          # pin a specific release
+install.sh --prefix /usr/local/bin   # install elsewhere
+install.sh --no-wire                 # binary only, skip agent wiring
+install.sh --uninstall               # strip wiring + remove binary
+```
+
+Or, equivalently, manage just the wiring with `init` itself:
+
+```bash
+scripture-mcp init --target=claude-code
+scripture-mcp init --target=codex
+scripture-mcp init --uninstall --target=claude-code   # remove
+```
+
+Homebrew / `apt` packages aren't shipped yet — `install.sh` is the only
+supported install path for v0.1.
 
 ### Claude Code adapter assets
 
