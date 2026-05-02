@@ -98,6 +98,10 @@ func TestLookupFromPromptSlashMarker(t *testing.T) {
 	}
 	var resp struct {
 		AdditionalContext string `json:"additionalContext"`
+		HookSpecificOutput struct {
+			HookEventName     string `json:"hookEventName"`
+			AdditionalContext string `json:"additionalContext"`
+		} `json:"hookSpecificOutput"`
 	}
 	if err := json.Unmarshal(out.Bytes(), &resp); err != nil {
 		t.Fatalf("output not JSON: %v\n%s", err, out.String())
@@ -107,6 +111,13 @@ func TestLookupFromPromptSlashMarker(t *testing.T) {
 	}
 	if !strings.Contains(resp.AdditionalContext, "John 3:16") {
 		t.Errorf("envelope missing display ref: %s", resp.AdditionalContext)
+	}
+	if resp.HookSpecificOutput.HookEventName != "UserPromptExpansion" {
+		t.Errorf("hookSpecificOutput hookEventName = %q, want UserPromptExpansion",
+			resp.HookSpecificOutput.HookEventName)
+	}
+	if resp.HookSpecificOutput.AdditionalContext != resp.AdditionalContext {
+		t.Errorf("hookSpecificOutput additionalContext must mirror top-level additionalContext")
 	}
 }
 
@@ -128,7 +139,10 @@ func TestLookupFromPromptInlineMarker(t *testing.T) {
 }
 
 func TestLookupFromPromptJSONInputForm(t *testing.T) {
-	body, _ := json.Marshal(map[string]string{"prompt": "/bible John 3:16 do the thing"})
+	body, _ := json.Marshal(map[string]string{
+		"hook_event_name": "UserPromptSubmit",
+		"prompt":          "/bible John 3:16 do the thing",
+	})
 	var out bytes.Buffer
 	code := runLookupFromPrompt(nil, Streams{In: bytes.NewReader(body), Out: &out, Err: &bytes.Buffer{}})
 	if code != 0 {
@@ -136,6 +150,18 @@ func TestLookupFromPromptJSONInputForm(t *testing.T) {
 	}
 	if out.Len() == 0 {
 		t.Fatal("expected JSON output for valid marker, got empty")
+	}
+	var resp struct {
+		HookSpecificOutput struct {
+			HookEventName string `json:"hookEventName"`
+		} `json:"hookSpecificOutput"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &resp); err != nil {
+		t.Fatalf("output not JSON: %v\n%s", err, out.String())
+	}
+	if resp.HookSpecificOutput.HookEventName != "UserPromptSubmit" {
+		t.Errorf("hookSpecificOutput hookEventName = %q, want UserPromptSubmit",
+			resp.HookSpecificOutput.HookEventName)
 	}
 }
 

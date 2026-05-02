@@ -104,7 +104,7 @@ func runLookupFromPrompt(args []string, s Streams) int {
 		fmt.Fprintln(s.Err, "error:", err)
 		return 1
 	}
-	prompt := normalizePromptInput(body)
+	prompt, hookEventName := normalizePromptInput(body)
 	tradition, ref, ok := scanMarker(prompt)
 	if !ok {
 		// No marker → silent exit so the hook adds nothing.
@@ -118,9 +118,21 @@ func runLookupFromPrompt(args []string, s Streams) int {
 		fmt.Fprintf(s.Err, "verse-driven: lookup failed for %q %q: %v\n", tradition, ref, err)
 		return 0
 	}
+	additionalContext := injector.Envelope(v)
+	if hookEventName == "" {
+		// Claude Code requires additionalContext inside hookSpecificOutput
+		// for UserPromptExpansion hooks. Codex consumes the top-level field.
+		hookEventName = "UserPromptExpansion"
+	}
 	out := struct {
-		AdditionalContext string `json:"additionalContext"`
-	}{AdditionalContext: injector.Envelope(v)}
+		AdditionalContext  string `json:"additionalContext"`
+		HookSpecificOutput struct {
+			HookEventName     string `json:"hookEventName"`
+			AdditionalContext string `json:"additionalContext"`
+		} `json:"hookSpecificOutput"`
+	}{AdditionalContext: additionalContext}
+	out.HookSpecificOutput.HookEventName = hookEventName
+	out.HookSpecificOutput.AdditionalContext = additionalContext
 	enc := json.NewEncoder(s.Out)
 	enc.SetEscapeHTML(false)
 	if err := enc.Encode(out); err != nil {
@@ -132,22 +144,25 @@ func runLookupFromPrompt(args []string, s Streams) int {
 // normalizePromptInput accepts either a raw prompt string or a JSON object
 // with a "prompt" or "user_prompt" field (the form Claude Code / Codex
 // hooks send on stdin).
-func normalizePromptInput(b []byte) string {
+func normalizePromptInput(b []byte) (prompt string, hookEventName string) {
 	trimmed := strings.TrimSpace(string(b))
 	if trimmed == "" {
-		return ""
+		return "", ""
 	}
 	if trimmed[0] == '{' {
 		var obj map[string]any
 		if err := json.Unmarshal([]byte(trimmed), &obj); err == nil {
+			if s, ok := obj["hook_event_name"].(string); ok {
+				hookEventName = s
+			}
 			for _, k := range []string{"prompt", "user_prompt", "input", "text"} {
 				if s, ok := obj[k].(string); ok && s != "" {
-					return s
+					return s, hookEventName
 				}
 			}
 		}
 	}
-	return trimmed
+	return trimmed, hookEventName
 }
 
 var (

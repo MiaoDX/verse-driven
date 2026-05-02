@@ -83,3 +83,17 @@ docs/                   issues-backlog.md, benchmarks/
 - Pack metadata (`metadata.json`) lives next to `verses.jsonl` and records
   provider, license, attribution, source URL, and build date.
 - Branches: feature work goes on `claude-issue-<number>`; one PR per issue.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs are tracked in GitHub Issues for `MiaoDX/verse-driven`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Triage uses the default five-label vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This is a single-context repo: read root `CONTEXT.md` and root `docs/adr/` when present. See `docs/agents/domain.md`.
