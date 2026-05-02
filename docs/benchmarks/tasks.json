@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "description": "Issue #8 coding-quality regression task pack. 10 representative tasks (4 refactor, 3 bugfix, 3 feature) used to detect whether enabling any verse-driven mode degrades coding quality vs baseline. Each task ships a small Python fixture under docs/benchmarks/fixtures/<id>/ and is graded by running pytest against the fixture's tests.",
+  "modes": [
+    {
+      "id": "baseline",
+      "description": "scripture-mcp uninstalled; bare agent invocation. The reference distribution."
+    },
+    {
+      "id": "preview-only",
+      "description": "Claude /bible (or Codex [[bible:...]]) marker is typed but the user does NOT confirm injection. Tests that the preview path itself does not influence the model."
+    },
+    {
+      "id": "inject-once",
+      "description": "Marker is typed AND confirmed; the verse envelope is in turn N's model_call input. The user's coding instruction follows in the same turn."
+    },
+    {
+      "id": "recap-only",
+      "description": "Mode B recap is enabled, but no markers are typed. Recap fires after the run; the agent never sees a verse during the coding work."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "refactor-cron",
+      "type": "refactor",
+      "name": "Extract cron-string parsing into a helper",
+      "description": "The fixture's scheduler.py inlines cron-string parsing inside schedule_job. Extract a parse_cron(spec: str) -> CronSpec helper without changing schedule_job's external behavior.",
+      "fixture_dir": "fixtures/refactor-cron",
+      "acceptance": "pytest -q",
+      "lines_of_code": 45
+    },
+    {
+      "id": "refactor-config-merge",
+      "type": "refactor",
+      "name": "Replace nested if-cascade with dict-merge",
+      "description": "config.py merges three config layers via nested if-cascade. Replace with a single deep_merge helper while preserving precedence semantics.",
+      "fixture_dir": "fixtures/refactor-config-merge",
+      "acceptance": "pytest -q",
+      "lines_of_code": 60
+    },
+    {
+      "id": "refactor-csv-rows",
+      "type": "refactor",
+      "name": "Switch CSV reader from index-based to namedtuple-based",
+      "description": "report.py reads CSV rows as lists and accesses fields by integer index. Switch to a namedtuple/dataclass keyed by header name.",
+      "fixture_dir": "fixtures/refactor-csv-rows",
+      "acceptance": "pytest -q",
+      "lines_of_code": 50
+    },
+    {
+      "id": "refactor-rename",
+      "type": "refactor",
+      "name": "Rename ambiguous identifier across module",
+      "description": "stats.py has a function named `do` and a variable named `tmp` whose roles are non-obvious. Rename to descriptive names without altering external API.",
+      "fixture_dir": "fixtures/refactor-rename",
+      "acceptance": "pytest -q",
+      "lines_of_code": 35
+    },
+    {
+      "id": "bugfix-off-by-one",
+      "type": "bugfix",
+      "name": "Off-by-one in window aggregation",
+      "description": "windows.py's rolling_sum returns one fewer window than expected for every window size — its loop's upper bound is off by one. Find and fix it.",
+      "fixture_dir": "fixtures/bugfix-off-by-one",
+      "acceptance": "pytest -q",
+      "lines_of_code": 25
+    },
+    {
+      "id": "bugfix-utf8-truncate",
+      "type": "bugfix",
+      "name": "UTF-8 truncation cuts mid-codepoint",
+      "description": "truncate.py's truncate_bytes splits multi-byte UTF-8 sequences, producing invalid output. Fix without regressing the byte-budget contract.",
+      "fixture_dir": "fixtures/bugfix-utf8-truncate",
+      "acceptance": "pytest -q",
+      "lines_of_code": 30
+    },
+    {
+      "id": "bugfix-race-counter",
+      "type": "bugfix",
+      "name": "Counter increments are lost under concurrency",
+      "description": "counter.py's increment is called from multiple threads but uses non-atomic += on an int. Make it thread-safe; the lock-free fast-path is acceptable if proven correct.",
+      "fixture_dir": "fixtures/bugfix-race-counter",
+      "acceptance": "pytest -q",
+      "lines_of_code": 40
+    },
+    {
+      "id": "feature-rate-limit",
+      "type": "feature",
+      "name": "Add a token-bucket rate limiter",
+      "description": "Add a TokenBucket class to limiter.py that enforces a configurable rate and burst; the existing function rate_limit(f, rate, burst) wires it as a decorator. Tests cover steady-state and burst.",
+      "fixture_dir": "fixtures/feature-rate-limit",
+      "acceptance": "pytest -q",
+      "lines_of_code": 55
+    },
+    {
+      "id": "feature-flatten-json",
+      "type": "feature",
+      "name": "Add a flatten_json(obj, sep='.') -> dict helper",
+      "description": "Add flatten_json to flatten.py: nested dicts become dotted keys; lists become bracketed indices; scalars pass through. Tests cover four nesting shapes.",
+      "fixture_dir": "fixtures/feature-flatten-json",
+      "acceptance": "pytest -q",
+      "lines_of_code": 50
+    },
+    {
+      "id": "feature-cli-flag",
+      "type": "feature",
+      "name": "Add --json output mode to existing CLI",
+      "description": "tool.py prints a human-readable summary today. Add an opt-in --json flag that emits the same data as a single JSON object on stdout. Existing default output must be unchanged.",
+      "fixture_dir": "fixtures/feature-cli-flag",
+      "acceptance": "pytest -q",
+      "lines_of_code": 65
+    }
+  ]
+}
