@@ -4,15 +4,19 @@
 > *"Look at the birds of the air, they neither sow nor reap." — Matthew 6:26*
 
 A coding-agent extension that lets you frame coding tasks with passages from
-the world's wisdom literature — the Bible, Quran, Tao Te Ching, Heart Sutra —
-**without polluting the agent's coding context**.
+wisdom literature — currently KJV Bible and 道德经, with Heart Sutra/Quran
+adapters stubbed for later data work — **without polluting the agent's
+coding context**.
 
 Works with [Claude Code](https://claude.com/code) and
 [Codex](https://github.com/openai/codex). Local stdio MCP, zero remote dependency,
 zero impact on coding quality when not in use.
 
-> **Status:** 🚧 pre-alpha. Repo just bootstrapped. See [`plan.md`](./plan.md)
-> for the two-week PoC roadmap.
+> **Status:** v0.1 candidate, source-install ready. Core binary, CLI, MCP
+> server, Claude Code adapter, Codex adapter, lifecycle tests, and benchmark
+> fixtures are implemented. GitHub release artifacts are not published yet;
+> the remaining release gates are issue #8 benchmark results and issue #9
+> launch polish.
 
 ---
 
@@ -61,18 +65,23 @@ to the agent's transcript.
 ### Mode A example
 
 ```
-> /bible Matthew 6:26
+> /bible John 3:13
 
-📖 Matthew 6:26 (KJV)
-"Behold the fowls of the air: for they sow not, neither do they reap..."
+John 3:13 (KJV)
+[visible verse preview]
+sha256:... · Project Gutenberg eBook #10 · Public domain (US)
 
-Source: Project Gutenberg / KJV
-[ Inject for next turn only ]  [ Cancel ]
-
-> inject once
 > Refactor this scheduler. Preserve the cron-string API.
 
-[Claude Code does the refactor, with the verse framing this single turn]
+[Claude Code does the refactor; the verse was available for the slash-command turn only]
+```
+
+Codex uses inline markers instead of slash commands:
+
+```
+> $dao.11 Refactor this scheduler. Preserve the cron-string API.
+> $bible.John.3.13 Refactor this parser.
+> [[bible:John 3:13]] Refactor this parser.
 ```
 
 ### Mode B example
@@ -91,25 +100,48 @@ Source: Project Gutenberg / KJV
 ## Architecture
 
 ```
-                  ┌─ packs/        (KJV / 道德经 / 心经 / Quran ...)
+                  ┌─ packs/        (bundled KJV + 道德经; Heart Sutra api-only stub)
    shared core  ──┼─ resolver/     (reference parsing + checksum)
                   └─ mcp-server/   (local stdio MCP)
                             │
               ┌─────────────┴─────────────┐
               │                           │
       Claude adapter                Codex adapter
+      ├─ slash commands            ├─ inline markers
       ├─ output-style              ├─ skill (scripture-lookup)
-      ├─ skill (verse-inject)      ├─ hook (UserPromptSubmit)
-      └─ hooks (UserPromptExpansion└─ shell wrapper for recap
-          + Stop)
+      ├─ skill (verse-inject)      ├─ UserPromptSubmit hook
+      └─ hooks (UserPromptExpansion + Stop)
+                                   └─ shell wrapper for recap
 ```
 
 One Go binary, three invocation modes:
 
 ```bash
 scripture-mcp serve                              # stdio MCP for cc/codex
-scripture-mcp lookup "John 3:16" --format=json   # CLI for hooks
+scripture-mcp lookup "John 3:13" --format=json   # CLI for hooks
 scripture-mcp recap --tradition=dao --terminal   # Mode B recap
+```
+
+Supported reference forms:
+
+```text
+# Claude Code slash commands
+/bible John 3:13
+/bible john.3.13
+/dao 11
+
+# Codex inline markers
+[[bible:John 3:13]]
+$bible:John 3:13
+$bible.John.3.13
+$dao:11
+$dao.11
+
+# Direct CLI/MCP lookup
+John 3:13
+dao 11
+dao.11
+quran.2.255   # parses, but Quran text is not bundled yet
 ```
 
 **~80% of the code is shared between Claude Code and Codex.** Differences are
@@ -133,15 +165,50 @@ This single-binary / multi-interface design follows the pattern from
 
 ---
 
-## Install
+## Install From Source
 
-One line:
+There is no published GitHub release yet. For the current checkout, build and
+install the local binary:
+
+```bash
+go test ./...
+make build
+mkdir -p ~/.local/bin
+cp bin/scripture-mcp ~/.local/bin/scripture-mcp
+chmod +x ~/.local/bin/scripture-mcp
+```
+
+Make sure `~/.local/bin` is on `PATH`:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Then wire the agents:
+
+```bash
+scripture-mcp init --target=codex
+
+# Claude Code's current MCP registry is managed by the claude CLI:
+claude mcp add --scope user scripture -- scripture-mcp serve
+scripture-mcp init --target=claude-code
+```
+
+Install the static adapter assets shown below. They are intentionally separate
+from `init` today so users can inspect the slash commands, output style, and
+skills before copying or symlinking them.
+
+### Release Installer Status
+
+`install.sh` exists and is tested, but it expects release tarballs that have
+not been published yet. Once v0.1.0 is released, the intended one-line install
+path is:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/MiaoDX/verse-driven/main/install.sh | bash
 ```
 
-What it does:
+Release installer behavior:
 
 1. Detects your OS (macOS / Linux) and arch (arm64 / x86_64), downloads
    the matching `scripture-mcp` release binary, and installs it to
@@ -171,14 +238,13 @@ scripture-mcp init --target=codex
 scripture-mcp init --uninstall --target=claude-code   # remove
 ```
 
-Homebrew / `apt` packages aren't shipped yet — `install.sh` is the only
-supported install path for v0.1.
+Homebrew / `apt` packages are not shipped yet.
 
 ### Claude Code adapter assets
 
 In addition to the `settings.json` snippet that `init --target=claude-code`
-installs, the Claude adapter ships two static assets you symlink (or copy)
-into your Claude config:
+installs, the Claude adapter ships static assets you symlink (or copy) into
+your Claude config:
 
 ```bash
 # Slash commands — preview visibly and inject for this turn.
@@ -199,9 +265,9 @@ ln -s "$PWD/adapters/claude-code/skills/verse-inject/SKILL.md" \
       ~/.claude/skills/verse-inject/SKILL.md
 ```
 
-Both files are deliberately tiny and contain **no scripture text** —
-verses are fetched from the bundled MCP server at lookup time. The skill
-sets `disable-model-invocation: true` so the model never auto-triggers it.
+These files are deliberately tiny and contain **no scripture text** — verses
+are fetched from the bundled MCP server at lookup time. The skill sets
+`disable-model-invocation: true` so the model never auto-triggers it.
 
 ### Codex adapter assets
 
@@ -255,26 +321,41 @@ Codex `model_call` input.
 
 See [`plan.md`](./plan.md) for the full design and
 [`docs/issues-backlog.md`](./docs/issues-backlog.md) for the 9-issue work
-plan. v0.1 acceptance criteria:
+plan. Current implementation status:
 
-1. ✅ `scripture-mcp serve` runs on macOS and Linux
-2. ✅ `/bible John 3:16` in Claude Code shows a preview card
-3. ✅ "Inject once" makes the verse visible to the model in the next turn
-4. ✅ The turn after that, the model can no longer see the verse *(lifecycle)*
-5. ✅ Mode B recap reaches the terminal but never enters a `model_call` input
+- ✅ `scripture-mcp serve` runs and exposes MCP tools: `lookup`, `search`,
+  `random`, and `list_traditions`.
+- ✅ CLI commands exist for lookup, prompt-hook lookup, recap, and config init.
+- ✅ Claude Code Mode A works through slash commands such as `/bible John 3:13`
+  and `/dao 11`; the command shows a visible preview and injects the card for
+  that turn.
+- ✅ Codex Mode A works through `[[bible:John 3:13]]`, `$dao:11`, `$dao.11`,
+  and `$bible.John.3.13`.
+- ✅ Mode B recap is isolated: Claude uses a `Stop` hook, Codex uses the `cdx`
+  wrapper.
+- ✅ Local lifecycle simulations verify injected scripture disappears from later
+  model inputs, including 30-turn follow-up simulations.
+- ✅ Coding-quality benchmark scaffolding exists: 10 fixtures × 4 modes
+  (`baseline`, `preview-only`, `inject-once`, `recap-only`).
+
+Remaining v0.1 release gates:
+
+- Issue #8: run live Claude/Codex E2E lifecycle checks, run the coding-quality
+  benchmark, and publish `docs/benchmarks/v0.1.md` with real numbers.
+- Issue #9: launch polish — localized aliases, learning-mode polish, GIFs,
+  changelog, release binaries, and announcement draft.
 
 ---
 
-## Initial pack list
+## Pack Status
 
-| Pack | Source | License | Bundled? |
+| Pack | Source | License | Current state |
 |---|---|---|---|
-| Bible KJV (en) | [Project Gutenberg](https://www.gutenberg.org/) | Public domain (US) | ✅ |
-| 道德经 (zh) | [Chinese Text Project](https://ctext.org/) | Open access | ✅ |
-| 心经 (zh) | [CBETA](https://cbeta.org/) | See pack release notes | ✅ |
-| Quran (en) | [Tanzil](https://tanzil.net/) | CC BY 3.0 | ✅ |
-| Quran (ar + 译本) | [quran.com API](https://api.quran.com/) | API-only | ⏳ |
-| 中文圣经 | (multiple, complex licensing) | — | ❌ Phase 2 |
+| Bible KJV (en) | [Project Gutenberg](https://www.gutenberg.org/) eBook #10 | Public domain (US) | ✅ Bundled, 31,102 verses |
+| 道德经 (zh-Hans) | [Project Gutenberg](https://www.gutenberg.org/) eBook #7337 | Public domain | ✅ Bundled, 81 chapters |
+| 心经 (zh-Hans) | [CBETA](https://cbeta.org/) | Pending license audit | ⚠️ API-only stub, 0 bundled verses |
+| Quran | planned | pending | ❌ Resolver support only; no bundled text |
+| 中文圣经 | planned | complex licensing | ❌ Phase 2 |
 
 ---
 
@@ -305,18 +386,20 @@ Full reference list (including official Claude Code / Codex docs) lives in
 ## License
 
 Code: MIT.
-Data packs: each pack ships with its own `LICENSE` reflecting the upstream
-source. KJV and Tao Te Ching are public domain; Tanzil-based packs require
-the CC BY 3.0 attribution notice be preserved.
+Bundled data packs keep their own upstream attribution metadata. The current
+binary embeds KJV from Project Gutenberg eBook #10 and 道德经 from Project
+Gutenberg eBook #7337, both public-domain sources. Heart Sutra and Quran
+content are not bundled yet; those packs need license review and attribution
+work before release.
 
 ---
 
 ## Contributing
 
-This is a brand-new project. The first thing that needs to exist is the Go
-binary and the KJV pack builder. If you want to help, the best place to start
-is reading [`plan.md`](./plan.md) and opening an issue with what part of the
-PoC you'd like to tackle.
+The core proof of concept is implemented. The best places to help now are the
+v0.1 release gates: run and document benchmark results for issue #8, polish
+release artifacts for issue #9, and audit/add additional data packs with clear
+source provenance.
 
 Tradition contributions especially welcome — if you can verify a pack against
 its canonical source and add the right attribution, please open a PR.
