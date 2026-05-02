@@ -169,6 +169,51 @@ Both files are deliberately tiny and contain **no scripture text** —
 verses are fetched from the bundled MCP server at lookup time. The skill
 sets `disable-model-invocation: true` so the model never auto-triggers it.
 
+### Codex adapter assets
+
+Codex Mode A is wired entirely through the `config.toml` snippet
+`init --target=codex` writes (the `UserPromptSubmit` hook calls
+`scripture-mcp lookup-from-prompt`, which recognizes the inline marker
+syntax `[[bible:John 3:16]]`).
+
+In addition, the adapter ships:
+
+```bash
+# Manual fallback skill — preview before sending the [[…]] marker.
+mkdir -p ~/.codex/skills/scripture-lookup/agents
+ln -s "$PWD/adapters/codex/skills/scripture-lookup/SKILL.md" \
+      ~/.codex/skills/scripture-lookup/SKILL.md
+ln -s "$PWD/adapters/codex/skills/scripture-lookup/agents/openai.yaml" \
+      ~/.codex/skills/scripture-lookup/agents/openai.yaml
+
+# Mode B recap wrapper — Codex has no Stop hook, so recap fires from
+# a thin shell wrapper that runs *outside* the Codex transcript.
+cp adapters/codex/wrapper/cdx ~/.local/bin/cdx
+chmod +x ~/.local/bin/cdx
+# Then run `cdx ...` instead of `codex ...`.
+# A PowerShell counterpart lives at adapters/codex/wrapper/cdx.ps1.
+```
+
+The skill's `agents/openai.yaml` pins `allow_implicit_invocation: false`
+so the OpenAI/Codex model cannot auto-invoke `scripture-lookup` during a
+coding turn — it must be called by name. The skill body, like its Claude
+counterpart, contains **no scripture text**: verses are fetched from the
+bundled MCP server at lookup time.
+
+**Codex skill path note:** official Codex docs and OSS repos disagree on
+whether per-user skills live under `~/.codex/skills`, `$CODEX_HOME/skills`,
+or `~/.agents/skills`. The snippets above use `~/.codex/skills`, matching
+the same `~/.codex/config.toml` location `init --target=codex` writes to.
+If your Codex build expects a different path, symlink the skill there
+instead.
+
+**Honest limitation:** the recap fires because the wrapping shell stays
+alive after `codex` exits and runs `scripture-mcp recap --terminal`.
+Launching `codex` directly (without `cdx`) bypasses the recap entirely.
+This is a deliberate physical-isolation trade-off — see [`plan.md`](./plan.md)
+§5.2 — and means there is no way for the recap text to leak into a future
+Codex `model_call` input.
+
 ---
 
 ## Roadmap

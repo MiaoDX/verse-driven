@@ -1,0 +1,6 @@
+# Codex per-agent skill manifest. Pinning allow_implicit_invocation: false
+# means OpenAI/Codex models cannot auto-invoke scripture-lookup during a
+# coding turn; the user must call the skill by name. This is the Codex-side
+# equivalent of Claude Code's `disable-model-invocation: true` frontmatter.
+name: scripture-lookup
+allow_implicit_invocation: false

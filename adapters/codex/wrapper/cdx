@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# cdx — Codex shell wrapper that fires a Mode B scripture recap after the
+# Codex session ends. Codex has no equivalent of Claude Code's `Stop` hook,
+# so the recap runs in the wrapping shell process, physically outside any
+# Codex transcript or model_call input.
+#
+# Install: place this file on $PATH (or alias `cdx` to it) and run `cdx`
+# instead of `codex`. The wrapper preserves the exit code of the wrapped
+# `codex` invocation; recap fires on success and on non-zero exit.
+#
+# Limitation: launching `codex` directly bypasses this wrapper, so the
+# recap is opt-in by use of `cdx`.
+
+set -u
+
+CODEX_BIN="${CODEX_BIN:-codex}"
+SCRIPTURE_BIN="${SCRIPTURE_MCP_BIN:-scripture-mcp}"
+
+if ! command -v "$CODEX_BIN" >/dev/null 2>&1; then
+  echo "cdx: $CODEX_BIN not found on PATH" >&2
+  exit 127
+fi
+
+"$CODEX_BIN" "$@"
+exit_code=$?
+
+if command -v "$SCRIPTURE_BIN" >/dev/null 2>&1; then
+  "$SCRIPTURE_BIN" recap --terminal || true
+else
+  echo "cdx: $SCRIPTURE_BIN not found on PATH; skipping recap" >&2
+fi
+
+exit $exit_code

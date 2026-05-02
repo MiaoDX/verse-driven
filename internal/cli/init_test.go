@@ -142,6 +142,34 @@ func TestInitCodexCreatesToml(t *testing.T) {
 	}
 }
 
+func TestInitCodexRecapOnPrintsCdxAliasHint(t *testing.T) {
+	home := tempHome(t)
+	stdout, _, code := runInitWithHome(t, home, "--target=codex", "--recap=on")
+	if code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	for _, want := range []string{
+		"cdx",
+		"alias cdx=",
+		"adapters/codex/wrapper/cdx",
+	} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("recap=on stdout should mention %q:\n%s", want, stdout)
+		}
+	}
+}
+
+func TestInitCodexRecapOffSkipsCdxAliasHint(t *testing.T) {
+	home := tempHome(t)
+	stdout, _, code := runInitWithHome(t, home, "--target=codex", "--recap=off")
+	if code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	if strings.Contains(stdout, "alias cdx=") {
+		t.Errorf("recap=off should not print cdx alias hint:\n%s", stdout)
+	}
+}
+
 func TestInitMissingTarget(t *testing.T) {
 	home := tempHome(t)
 	_, errOut, code := runInitWithHome(t, home)
