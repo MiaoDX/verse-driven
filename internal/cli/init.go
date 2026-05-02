@@ -227,7 +227,7 @@ func renderClaudeSnippet(recapOn bool) string {
       {
         "matcher": "^(bible|sutra|dao|quran)$",
         "hooks": [
-          { "type": "command", "command": "scripture-mcp lookup-from-prompt" }
+          { "type": "command", "command": "scripture-mcp lookup-from-prompt --hook-event=UserPromptExpansion" }
         ]
       }
     ]` + stopBlock + `
@@ -259,7 +259,7 @@ codex_hooks = true
 [[hooks.UserPromptSubmit]]
 [[hooks.UserPromptSubmit.hooks]]
 type = "command"
-command = "scripture-mcp lookup-from-prompt"
+command = "scripture-mcp lookup-from-prompt --hook-event=UserPromptSubmit"
 timeout = 15
 ` + recapNote
 }

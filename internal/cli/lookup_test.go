@@ -97,7 +97,6 @@ func TestLookupFromPromptSlashMarker(t *testing.T) {
 		t.Fatalf("exit %d, stderr=%s", code, errBuf.String())
 	}
 	var resp struct {
-		AdditionalContext string `json:"additionalContext"`
 		HookSpecificOutput struct {
 			HookEventName     string `json:"hookEventName"`
 			AdditionalContext string `json:"additionalContext"`
@@ -106,18 +105,15 @@ func TestLookupFromPromptSlashMarker(t *testing.T) {
 	if err := json.Unmarshal(out.Bytes(), &resp); err != nil {
 		t.Fatalf("output not JSON: %v\n%s", err, out.String())
 	}
-	if !strings.Contains(resp.AdditionalContext, "<scripture_card>") {
-		t.Errorf("envelope missing scripture_card tags: %s", resp.AdditionalContext)
+	if !strings.Contains(resp.HookSpecificOutput.AdditionalContext, "<scripture_card>") {
+		t.Errorf("envelope missing scripture_card tags: %s", resp.HookSpecificOutput.AdditionalContext)
 	}
-	if !strings.Contains(resp.AdditionalContext, "John 3:16") {
-		t.Errorf("envelope missing display ref: %s", resp.AdditionalContext)
+	if !strings.Contains(resp.HookSpecificOutput.AdditionalContext, "John 3:16") {
+		t.Errorf("envelope missing display ref: %s", resp.HookSpecificOutput.AdditionalContext)
 	}
 	if resp.HookSpecificOutput.HookEventName != "UserPromptExpansion" {
 		t.Errorf("hookSpecificOutput hookEventName = %q, want UserPromptExpansion",
 			resp.HookSpecificOutput.HookEventName)
-	}
-	if resp.HookSpecificOutput.AdditionalContext != resp.AdditionalContext {
-		t.Errorf("hookSpecificOutput additionalContext must mirror top-level additionalContext")
 	}
 }
 
@@ -128,13 +124,15 @@ func TestLookupFromPromptInlineMarker(t *testing.T) {
 		t.Fatalf("exit %d", code)
 	}
 	var resp struct {
-		AdditionalContext string `json:"additionalContext"`
+		HookSpecificOutput struct {
+			AdditionalContext string `json:"additionalContext"`
+		} `json:"hookSpecificOutput"`
 	}
 	if err := json.Unmarshal(out.Bytes(), &resp); err != nil {
 		t.Fatalf("output not JSON: %v\n%s", err, out.String())
 	}
-	if !strings.Contains(resp.AdditionalContext, "道德经") {
-		t.Errorf("dao envelope missing display ref:\n%s", resp.AdditionalContext)
+	if !strings.Contains(resp.HookSpecificOutput.AdditionalContext, "道德经") {
+		t.Errorf("dao envelope missing display ref:\n%s", resp.HookSpecificOutput.AdditionalContext)
 	}
 }
 
@@ -162,6 +160,37 @@ func TestLookupFromPromptJSONInputForm(t *testing.T) {
 	if resp.HookSpecificOutput.HookEventName != "UserPromptSubmit" {
 		t.Errorf("hookSpecificOutput hookEventName = %q, want UserPromptSubmit",
 			resp.HookSpecificOutput.HookEventName)
+	}
+}
+
+func TestLookupFromPromptHookEventFlag(t *testing.T) {
+	in := strings.NewReader("Please [[dao:11]] keep going on the helper.")
+	var out bytes.Buffer
+	if code := runLookupFromPrompt([]string{"--hook-event=UserPromptSubmit"}, Streams{In: in, Out: &out, Err: &bytes.Buffer{}}); code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	var resp struct {
+		HookSpecificOutput struct {
+			HookEventName     string `json:"hookEventName"`
+			AdditionalContext string `json:"additionalContext"`
+		} `json:"hookSpecificOutput"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &resp); err != nil {
+		t.Fatalf("output not JSON: %v\n%s", err, out.String())
+	}
+	if resp.HookSpecificOutput.HookEventName != "UserPromptSubmit" {
+		t.Errorf("hookSpecificOutput hookEventName = %q, want UserPromptSubmit",
+			resp.HookSpecificOutput.HookEventName)
+	}
+	if !strings.Contains(resp.HookSpecificOutput.AdditionalContext, "道德经") {
+		t.Errorf("dao envelope missing display ref:\n%s", resp.HookSpecificOutput.AdditionalContext)
+	}
+	var raw map[string]any
+	if err := json.Unmarshal(out.Bytes(), &raw); err != nil {
+		t.Fatalf("output not JSON object: %v", err)
+	}
+	if _, ok := raw["additionalContext"]; ok {
+		t.Errorf("Codex-compatible hook output must not include legacy top-level additionalContext")
 	}
 }
 

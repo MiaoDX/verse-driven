@@ -91,11 +91,12 @@ func writeTerminal(w io.Writer, v schema.Verse) int {
 //
 // If no marker is present, exits 0 silently with no output. The
 // integration intent is that each agent's hook pipes the user's prompt
-// to this command and merges the emitted `additionalContext` field into
-// the model's input for the current turn only.
+// to this command and merges the emitted `hookSpecificOutput.additionalContext`
+// field into the model's input for the current turn only.
 func runLookupFromPrompt(args []string, s Streams) int {
 	fs := flag.NewFlagSet("lookup-from-prompt", flag.ContinueOnError)
 	fs.SetOutput(s.Err)
+	hookEvent := fs.String("hook-event", "", "hook event name: UserPromptExpansion|UserPromptSubmit")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -105,6 +106,15 @@ func runLookupFromPrompt(args []string, s Streams) int {
 		return 1
 	}
 	prompt, hookEventName := normalizePromptInput(body)
+	if *hookEvent != "" {
+		hookEventName = *hookEvent
+	}
+	switch hookEventName {
+	case "", "UserPromptExpansion", "UserPromptSubmit":
+	default:
+		fmt.Fprintf(s.Err, "error: unsupported --hook-event %q\n", hookEventName)
+		return 2
+	}
 	tradition, ref, ok := scanMarker(prompt)
 	if !ok {
 		// No marker → silent exit so the hook adds nothing.
@@ -120,17 +130,16 @@ func runLookupFromPrompt(args []string, s Streams) int {
 	}
 	additionalContext := injector.Envelope(v)
 	if hookEventName == "" {
-		// Claude Code requires additionalContext inside hookSpecificOutput
-		// for UserPromptExpansion hooks. Codex consumes the top-level field.
+		// Direct CLI tests and older configs default to the Claude hook name.
+		// Installed Codex config passes --hook-event=UserPromptSubmit.
 		hookEventName = "UserPromptExpansion"
 	}
 	out := struct {
-		AdditionalContext  string `json:"additionalContext"`
 		HookSpecificOutput struct {
 			HookEventName     string `json:"hookEventName"`
 			AdditionalContext string `json:"additionalContext"`
 		} `json:"hookSpecificOutput"`
-	}{AdditionalContext: additionalContext}
+	}{}
 	out.HookSpecificOutput.HookEventName = hookEventName
 	out.HookSpecificOutput.AdditionalContext = additionalContext
 	enc := json.NewEncoder(s.Out)
@@ -153,6 +162,9 @@ func normalizePromptInput(b []byte) (prompt string, hookEventName string) {
 		var obj map[string]any
 		if err := json.Unmarshal([]byte(trimmed), &obj); err == nil {
 			if s, ok := obj["hook_event_name"].(string); ok {
+				hookEventName = s
+			}
+			if s, ok := obj["hookEventName"].(string); ok {
 				hookEventName = s
 			}
 			for _, k := range []string{"prompt", "user_prompt", "input", "text"} {
@@ -229,9 +241,9 @@ func resolveTrailing(tradition, rest string) (schema.Verse, error) {
 // Returns (_, _, false) when no marker is present.
 func scanMarker(prompt string) (tradition, ref string, ok bool) {
 	type hit struct {
-		idx        int
-		tradition  string
-		ref        string
+		idx       int
+		tradition string
+		ref       string
 	}
 	var best *hit
 	if m := reSlashMarker.FindStringSubmatchIndex(prompt); m != nil {

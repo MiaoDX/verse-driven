@@ -78,7 +78,7 @@ type Turn struct {
 // "verse is gone next turn" invariant true; the simulator makes it
 // observable.
 type Simulator struct {
-	Adapter   Adapter
+	Adapter    Adapter
 	transcript []Turn
 	// recapSeed makes the optional Mode B recap deterministic for tests.
 	// Zero leaves the recap CLI to its time-based default.
@@ -95,8 +95,8 @@ func New(adapter Adapter) *Simulator {
 
 // SetRecapSeed makes recap deterministic for tests; pair with
 // SetRecapTradition to fully pin the recap output.
-func (s *Simulator) SetRecapSeed(seed int64)       { s.recapSeed = seed }
-func (s *Simulator) SetRecapTradition(t string)    { s.recapTradition = t }
+func (s *Simulator) SetRecapSeed(seed int64)    { s.recapSeed = seed }
+func (s *Simulator) SetRecapTradition(t string) { s.recapTradition = t }
 
 // Transcript returns the full slice of recorded turns.
 func (s *Simulator) Transcript() []Turn { return s.transcript }
@@ -137,9 +137,8 @@ func (s *Simulator) RunTurn(prompt string, withRecap bool) Turn {
 }
 
 // invokeLookupFromPrompt calls the real CLI subcommand in-process. The
-// hook's contract is to emit a JSON object {"additionalContext": "..."}
-// on stdout when a marker is present, and exit 0 with no output
-// otherwise.
+// hook's contract is to emit hookSpecificOutput.additionalContext on stdout
+// when a marker is present, and exit 0 with no output otherwise.
 func (s *Simulator) invokeLookupFromPrompt(prompt string) string {
 	var stdout, stderr bytes.Buffer
 	streams := cli.Streams{
@@ -147,7 +146,11 @@ func (s *Simulator) invokeLookupFromPrompt(prompt string) string {
 		Out: &stdout,
 		Err: &stderr,
 	}
-	code := cli.Run("lookup-from-prompt", nil, streams)
+	args := []string{"--hook-event=UserPromptExpansion"}
+	if s.Adapter == AdapterCodex {
+		args = []string{"--hook-event=UserPromptSubmit"}
+	}
+	code := cli.Run("lookup-from-prompt", args, streams)
 	if code != 0 {
 		// A failing hook still must not break the turn; the binary
 		// soft-fails by spec. Treat as no envelope.
@@ -157,12 +160,14 @@ func (s *Simulator) invokeLookupFromPrompt(prompt string) string {
 		return ""
 	}
 	var resp struct {
-		AdditionalContext string `json:"additionalContext"`
+		HookSpecificOutput struct {
+			AdditionalContext string `json:"additionalContext"`
+		} `json:"hookSpecificOutput"`
 	}
 	if err := json.Unmarshal(stdout.Bytes(), &resp); err != nil {
 		return ""
 	}
-	return resp.AdditionalContext
+	return resp.HookSpecificOutput.AdditionalContext
 }
 
 // invokeRecap calls `recap` and captures its terminal-only output.

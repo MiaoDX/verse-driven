@@ -108,7 +108,7 @@ func Resolve(input string) (Reference, error) {
 }
 
 func parseDao(rest string) (Reference, error) {
-	rest = strings.TrimSpace(rest)
+	rest = trimAliasSeparator(rest)
 	if r, ok := tryMatchPrefix(rest, "chapter"); ok {
 		rest = strings.TrimSpace(r)
 	}
@@ -123,7 +123,7 @@ func parseDao(rest string) (Reference, error) {
 }
 
 func parseQuranNumeric(rest string) (Reference, error) {
-	rest = strings.TrimSpace(rest)
+	rest = trimAliasSeparator(rest)
 	if rest == "" {
 		return Reference{}, fmt.Errorf("%w: quran reference missing surah/verse", ErrUnrecognized)
 	}
@@ -140,6 +140,13 @@ func parseQuranNumeric(rest string) (Reference, error) {
 		return Reference{Tradition: TraditionQuran, Work: WorkQuran, Chapter: n}, nil
 	}
 	return Reference{}, fmt.Errorf("%w: quran reference %q", ErrInvalidNumber, rest)
+}
+
+func trimAliasSeparator(rest string) string {
+	rest = strings.TrimSpace(rest)
+	rest = strings.TrimPrefix(rest, ":")
+	rest = strings.TrimPrefix(rest, "：")
+	return strings.TrimSpace(rest)
 }
 
 func parseQuranSurahByName(rest string) (Reference, error) {
