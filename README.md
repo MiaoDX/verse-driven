@@ -181,7 +181,15 @@ installs, the Claude adapter ships two static assets you symlink (or copy)
 into your Claude config:
 
 ```bash
+# Slash commands — preview visibly and inject for this turn.
+mkdir -p ~/.claude/commands
+ln -s "$PWD/adapters/claude-code/commands/bible.md" ~/.claude/commands/bible.md
+ln -s "$PWD/adapters/claude-code/commands/dao.md" ~/.claude/commands/dao.md
+ln -s "$PWD/adapters/claude-code/commands/sutra.md" ~/.claude/commands/sutra.md
+ln -s "$PWD/adapters/claude-code/commands/quran.md" ~/.claude/commands/quran.md
+
 # Output style — turns on the <scripture_card> reading mode.
+mkdir -p ~/.claude/output-styles
 ln -s "$PWD/adapters/claude-code/output-styles/scripture-recap.md" \
       ~/.claude/output-styles/scripture-recap.md
 
