@@ -3,6 +3,7 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -47,12 +48,32 @@ func runInit(args []string, s Streams) int {
 			renderClaudeSnippet(*recap == "on"), *uninstall, *dryRun, s)
 	case "codex":
 		path := filepath.Join(home, ".codex", "config.toml")
-		return manageSnippet(path, "# >>> verse-driven", "# <<< verse-driven",
+		code := manageSnippet(path, "# >>> verse-driven", "# <<< verse-driven",
 			renderCodexSnippet(*recap == "on"), *uninstall, *dryRun, s)
+		if code == 0 && !*dryRun && !*uninstall && *recap == "on" {
+			printCdxAliasHint(s.Out)
+		}
+		return code
 	default:
 		fmt.Fprintf(s.Err, "error: unknown target %q (want claude-code|codex)\n", *target)
 		return 2
 	}
+}
+
+// printCdxAliasHint emits the wrapper-setup instructions for Codex Mode B.
+// Codex has no Stop-equivalent hook, so the recap fires from a thin shell
+// wrapper that wraps the `codex` invocation; the user has to put the
+// wrapper on PATH (or alias `cdx` to it) themselves. We never modify the
+// user's shell rc files automatically.
+func printCdxAliasHint(out io.Writer) {
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "verse-driven: Codex Mode B recap requires the `cdx` shell wrapper.")
+	fmt.Fprintln(out, "  Wrapper source: adapters/codex/wrapper/cdx (POSIX) or cdx.ps1 (PowerShell).")
+	fmt.Fprintln(out, "  Install one of:")
+	fmt.Fprintln(out, "    cp adapters/codex/wrapper/cdx ~/.local/bin/cdx && chmod +x ~/.local/bin/cdx")
+	fmt.Fprintln(out, "    alias cdx='/path/to/adapters/codex/wrapper/cdx'   # add to ~/.bashrc or ~/.zshrc")
+	fmt.Fprintln(out, "  Then run `cdx ...` instead of `codex ...` to get a terminal recap on exit.")
+	fmt.Fprintln(out, "  Note: launching `codex` directly bypasses the recap.")
 }
 
 func homeDir(s Streams) (string, error) {
