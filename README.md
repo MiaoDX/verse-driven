@@ -199,13 +199,13 @@ sets `disable-model-invocation: true` so the model never auto-triggers it.
 
 Codex Mode A is wired entirely through the `config.toml` snippet
 `init --target=codex` writes (the `UserPromptSubmit` hook calls
-`scripture-mcp lookup-from-prompt`, which recognizes the inline marker
-syntax `[[bible:John 3:16]]`).
+`scripture-mcp lookup-from-prompt`, which recognizes the canonical inline
+marker syntax `[[bible:John 3:16]]` plus ergonomic aliases like `$dao:11`).
 
 In addition, the adapter ships:
 
 ```bash
-# Manual fallback skill — preview before sending the [[…]] marker.
+# Manual fallback skill — preview before sending a marker.
 mkdir -p ~/.codex/skills/scripture-lookup/agents
 ln -s "$PWD/adapters/codex/skills/scripture-lookup/SKILL.md" \
       ~/.codex/skills/scripture-lookup/SKILL.md

@@ -136,6 +136,64 @@ func TestLookupFromPromptInlineMarker(t *testing.T) {
 	}
 }
 
+func TestLookupFromPromptDollarDaoAlias(t *testing.T) {
+	in := strings.NewReader("Please $dao:11 keep going on the helper.")
+	var out bytes.Buffer
+	if code := runLookupFromPrompt([]string{"--hook-event=UserPromptSubmit"}, Streams{In: in, Out: &out, Err: &bytes.Buffer{}}); code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	var resp struct {
+		HookSpecificOutput struct {
+			HookEventName     string `json:"hookEventName"`
+			AdditionalContext string `json:"additionalContext"`
+		} `json:"hookSpecificOutput"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &resp); err != nil {
+		t.Fatalf("output not JSON: %v\n%s", err, out.String())
+	}
+	if resp.HookSpecificOutput.HookEventName != "UserPromptSubmit" {
+		t.Errorf("hookSpecificOutput hookEventName = %q, want UserPromptSubmit",
+			resp.HookSpecificOutput.HookEventName)
+	}
+	if !strings.Contains(resp.HookSpecificOutput.AdditionalContext, "道德经") {
+		t.Errorf("dao envelope missing display ref:\n%s", resp.HookSpecificOutput.AdditionalContext)
+	}
+}
+
+func TestLookupFromPromptDollarBibleAliasTrimsTrailingPrompt(t *testing.T) {
+	in := strings.NewReader("Please $bible:John 3:16 refactor the helper.")
+	var out bytes.Buffer
+	if code := runLookupFromPrompt([]string{"--hook-event=UserPromptSubmit"}, Streams{In: in, Out: &out, Err: &bytes.Buffer{}}); code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	var resp struct {
+		HookSpecificOutput struct {
+			AdditionalContext string `json:"additionalContext"`
+		} `json:"hookSpecificOutput"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &resp); err != nil {
+		t.Fatalf("output not JSON: %v\n%s", err, out.String())
+	}
+	if !strings.Contains(resp.HookSpecificOutput.AdditionalContext, "John 3:16") {
+		t.Errorf("bible envelope missing display ref:\n%s", resp.HookSpecificOutput.AdditionalContext)
+	}
+}
+
+func TestLookupFromPromptDollarSkillNameDoesNotTrigger(t *testing.T) {
+	var out bytes.Buffer
+	code := runLookupFromPrompt(nil, Streams{
+		In:  strings.NewReader("$setup-matt-pocock-skills"),
+		Out: &out,
+		Err: &bytes.Buffer{},
+	})
+	if code != 0 {
+		t.Errorf("exit %d, want 0", code)
+	}
+	if out.Len() != 0 {
+		t.Errorf("expected no output for unrelated $skill syntax, got: %q", out.String())
+	}
+}
+
 func TestLookupFromPromptJSONInputForm(t *testing.T) {
 	body, _ := json.Marshal(map[string]string{
 		"hook_event_name": "UserPromptSubmit",

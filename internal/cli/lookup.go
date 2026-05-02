@@ -88,6 +88,7 @@ func writeTerminal(w io.Writer, v schema.Verse) int {
 //
 //   - Slash form (Claude Code): leading `/bible John 3:16` ...
 //   - Inline form (Codex):      ... `[[bible:John 3:16]]` ...
+//   - Dollar alias (Codex):     ... `$dao:11` ...
 //
 // If no marker is present, exits 0 silently with no output. The
 // integration intent is that each agent's hook pipes the user's prompt
@@ -185,6 +186,10 @@ var (
 	reSlashMarker = regexp.MustCompile(`(?i)(?:^|\s)/(bible|dao|sutra|quran)(?:[ \t]+([^\n]*))?`)
 	// [[bible:John 3:16]]   [[dao:11]]   [[sutra]]   [[quran:2:255]]
 	reInlineMarker = regexp.MustCompile(`(?i)\[\[(bible|dao|sutra|quran)(?::([^\]\n]*))?\]\]`)
+	// $dao:11   $bible:John 3:16   $sutra   $quran:2:255
+	// This is intentionally restricted to known tradition names so it
+	// does not collide with $skill-name invocation syntax.
+	reDollarMarker = regexp.MustCompile(`(?i)(?:^|\s)\$(bible|dao|sutra|quran)(?::([^\n]*))?`)
 )
 
 // resolveTrailing attempts to resolve a reference, progressively trimming
@@ -254,6 +259,13 @@ func scanMarker(prompt string) (tradition, ref string, ok bool) {
 	}
 	if m := reInlineMarker.FindStringSubmatchIndex(prompt); m != nil {
 		sub := reInlineMarker.FindStringSubmatch(prompt[m[0]:m[1]])
+		if best == nil || m[0] < best.idx {
+			best = &hit{idx: m[0], tradition: strings.ToLower(sub[1]), ref: strings.TrimSpace(sub[2])}
+		}
+	}
+	if m := reDollarMarker.FindStringSubmatchIndex(prompt); m != nil {
+		full := strings.TrimSpace(prompt[m[0]:m[1]])
+		sub := reDollarMarker.FindStringSubmatch(full)
 		if best == nil || m[0] < best.idx {
 			best = &hit{idx: m[0], tradition: strings.ToLower(sub[1]), ref: strings.TrimSpace(sub[2])}
 		}
