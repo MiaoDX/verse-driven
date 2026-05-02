@@ -32,6 +32,14 @@ func Envelope(v schema.Verse) string {
 		b.WriteString(", ")
 		b.WriteString(v.Source.Attribution)
 	}
+	if v.ChecksumSHA256 != "" {
+		// Surface the integrity checksum in the preview so the user can
+		// verify the verse came from the bundled pack and was not
+		// rewritten in transit. The model is instructed not to act on
+		// this beyond reproducing it verbatim if asked.
+		b.WriteString("\nchecksum: sha256:")
+		b.WriteString(v.ChecksumSHA256)
+	}
 	b.WriteString("\n</scripture_card>\n")
 	return b.String()
 }

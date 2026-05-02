@@ -148,6 +148,27 @@ scripture-mcp init --target=codex
 `init` merges config snippets into your existing `settings.json` /
 `config.toml` — it does not overwrite your config.
 
+### Claude Code adapter assets
+
+In addition to the `settings.json` snippet that `init --target=claude-code`
+installs, the Claude adapter ships two static assets you symlink (or copy)
+into your Claude config:
+
+```bash
+# Output style — turns on the <scripture_card> reading mode.
+ln -s "$PWD/adapters/claude-code/output-styles/scripture-recap.md" \
+      ~/.claude/output-styles/scripture-recap.md
+
+# Manual fallback skill — preview a verse without typing the slash marker.
+mkdir -p ~/.claude/skills/verse-inject
+ln -s "$PWD/adapters/claude-code/skills/verse-inject/SKILL.md" \
+      ~/.claude/skills/verse-inject/SKILL.md
+```
+
+Both files are deliberately tiny and contain **no scripture text** —
+verses are fetched from the bundled MCP server at lookup time. The skill
+sets `disable-model-invocation: true` so the model never auto-triggers it.
+
 ---
 
 ## Roadmap
