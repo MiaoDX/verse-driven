@@ -1,0 +1,30 @@
+{
+  "date": "2026-05-02",
+  "binary": "/Users/fl/.local/bin/scripture-mcp",
+  "version": "v0.1.0",
+  "passed": true,
+  "results": [
+    {
+      "adapter": "claude",
+      "hook_event": "UserPromptExpansion",
+      "turn_n_context": true,
+      "turn_n_context_sha256": "86848cb1465a322fadcfa22bb504a3edba846a7269d06bcdd2632b0f7bd558c1",
+      "turn_n_plus_1_context": false,
+      "followup_turns": 30,
+      "followup_context_leaks": 0,
+      "recap_hashes_seen": 21,
+      "recap_leaks": 0
+    },
+    {
+      "adapter": "codex",
+      "hook_event": "UserPromptSubmit",
+      "turn_n_context": true,
+      "turn_n_context_sha256": "86848cb1465a322fadcfa22bb504a3edba846a7269d06bcdd2632b0f7bd558c1",
+      "turn_n_plus_1_context": false,
+      "followup_turns": 30,
+      "followup_context_leaks": 0,
+      "recap_hashes_seen": 21,
+      "recap_leaks": 0
+    }
+  ]
+}

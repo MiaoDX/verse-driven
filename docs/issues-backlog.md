@@ -229,23 +229,24 @@ and (b) a regression here must block any feature PR.
 ### Acceptance criteria
 
 **Injection lifecycle (the make-or-break invariant):**
-- [ ] Automated end-to-end test driving Claude Code in headless mode (or replaying via SDK)
-- [ ] Sequence: turn N injects verse → turn N+1 model can quote it → turn N+2 model cannot
-- [ ] Compaction-resistant: after a 30-turn conversation following the inject, turn N+1's verse is still not recoverable
-- [ ] Mode B recap: prompt-history inspection confirms recap text never appears in any subsequent `model_call` input
-- [ ] Same test runs against both Claude and Codex adapters
-- [ ] On failure, prints which turn leaked and what residual content was found
+- [x] Automated end-to-end test driving Claude Code in headless mode (or replaying via SDK)
+- [x] Sequence: turn N injects verse → turn N+1 model can quote it → turn N+2 model cannot
+- [x] Compaction-resistant: after a 30-turn conversation following the inject, turn N+1's verse is still not recoverable
+- [x] Mode B recap: prompt-history inspection confirms recap text never appears in any subsequent `model_call` input
+- [x] Same test runs against both Claude and Codex adapters
+- [x] On failure, prints which turn leaked and what residual content was found
 
 **Coding-quality regression:**
-- [ ] Task pack of 10 representative coding tasks (mix of refactor / bug fix / new feature)
-- [ ] Four modes: `baseline`, `preview-only`, `inject-once`, `recap-only`
-- [ ] Metrics per task: success rate (tests pass), input tokens, output tokens, p50 latency
-- [ ] Report posted to `docs/benchmarks/<date>.md` per release
-- [ ] Acceptance: no mode regresses success rate by >5pp vs baseline
+- [x] Task pack of 10 representative coding tasks (mix of refactor / bug fix / new feature)
+- [x] Four modes: `baseline`, `preview-only`, `inject-once`, `recap-only`
+- [x] Metrics per task: success rate (tests pass), input tokens, output tokens, p50 latency
+- [x] Report posted to `docs/benchmarks/<date>.md` per release
+- [x] Acceptance: no mode regresses success rate by >5pp vs baseline
 
 ### Notes
-This issue gates the v0.1 release. If we can't keep the lifecycle invariant,
-the project doesn't ship.
+Completed in `docs/benchmarks/v0.1.md`: the lifecycle probe passed for both
+adapter hook events and the 80-row live Claude/Codex coding-quality benchmark
+passed with 0 regressions vs baseline.
 
 ---
 
@@ -263,7 +264,7 @@ features for Chinese users + memory training, plus the release artifacts.
 - [ ] Optional SM-2 spaced repetition selecting next verse based on `~/.config/scripture-mcp/learning.json`
 - [ ] Toggleable via `init --learning=on`
 - [ ] README has 1 GIF for Mode A and 1 GIF for Mode B
-- [ ] `docs/benchmarks/v0.1.md` published with #8 results
+- [x] `docs/benchmarks/v0.1.md` published with #8 results
 - [ ] `CHANGELOG.md` with v0.1.0 entry
 - [ ] GitHub release v0.1.0 with prebuilt binaries (macOS arm64 + x86_64, Linux x86_64)
 - [ ] Announcement draft for HN Show HN / r/ClaudeAI / r/programming

@@ -15,8 +15,9 @@ zero impact on coding quality when not in use.
 > **Status:** v0.1 candidate, source-install ready. Core binary, CLI, MCP
 > server, Claude Code adapter, Codex adapter, lifecycle tests, and benchmark
 > fixtures are implemented. GitHub release artifacts are not published yet;
-> the remaining release gates are issue #8 benchmark results and issue #9
-> launch polish.
+> issue #8's lifecycle + coding-quality benchmark gate is published in
+> [`docs/benchmarks/v0.1.md`](./docs/benchmarks/v0.1.md). The remaining
+> release gate is issue #9 launch polish.
 
 ---
 
@@ -337,11 +338,13 @@ plan. Current implementation status:
   model inputs, including 30-turn follow-up simulations.
 - ✅ Coding-quality benchmark scaffolding exists: 10 fixtures × 4 modes
   (`baseline`, `preview-only`, `inject-once`, `recap-only`).
+- ✅ Issue #8 release gate passed: external lifecycle probe passed for Claude
+  and Codex hook events, and the 80-row live Claude/Codex coding-quality
+  benchmark had 0 regressions vs baseline. See
+  [`docs/benchmarks/v0.1.md`](./docs/benchmarks/v0.1.md).
 
-Remaining v0.1 release gates:
+Remaining v0.1 release gate:
 
-- Issue #8: run live Claude/Codex E2E lifecycle checks, run the coding-quality
-  benchmark, and publish `docs/benchmarks/v0.1.md` with real numbers.
 - Issue #9: launch polish — localized aliases, learning-mode polish, GIFs,
   changelog, release binaries, and announcement draft.
 
@@ -396,10 +399,9 @@ work before release.
 
 ## Contributing
 
-The core proof of concept is implemented. The best places to help now are the
-v0.1 release gates: run and document benchmark results for issue #8, polish
-release artifacts for issue #9, and audit/add additional data packs with clear
-source provenance.
+The core proof of concept is implemented and the issue #8 benchmark gate has
+passed. The best places to help now are issue #9 launch polish and additional
+data packs with clear source provenance.
 
 Tradition contributions especially welcome — if you can verify a pack against
 its canonical source and add the right attribution, please open a PR.
