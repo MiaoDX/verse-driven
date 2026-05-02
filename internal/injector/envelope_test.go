@@ -28,6 +28,7 @@ func TestEnvelopeWrapsScriptureCard(t *testing.T) {
 		"TXT",
 		"John 3:16",
 		"KJV",
+		"checksum: sha256:" + strings.Repeat("0", 64),
 		"</scripture_card>",
 	} {
 		if !strings.Contains(out, want) {
