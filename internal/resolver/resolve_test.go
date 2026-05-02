@@ -68,6 +68,7 @@ func TestResolve(t *testing.T) {
 		{"dao/zh_chapter_eighty_one", "道德经第八十一章", want{TraditionDao, WorkDaodejing, "", 81, 0, 0}},
 		{"dao/en_dao", "dao 11", want{TraditionDao, WorkDaodejing, "", 11, 0, 0}},
 		{"dao/en_dao_colon", "dao:11", want{TraditionDao, WorkDaodejing, "", 11, 0, 0}},
+		{"dao/en_dao_dot", "dao.11", want{TraditionDao, WorkDaodejing, "", 11, 0, 0}},
 		{"dao/en_dao_upper", "DAO 11", want{TraditionDao, WorkDaodejing, "", 11, 0, 0}},
 		{"dao/en_daodejing_chapter", "daodejing chapter 11", want{TraditionDao, WorkDaodejing, "", 11, 0, 0}},
 		{"dao/en_tao_te_ching", "Tao Te Ching 11", want{TraditionDao, WorkDaodejing, "", 11, 0, 0}},
@@ -81,6 +82,7 @@ func TestResolve(t *testing.T) {
 		// Quran
 		{"quran/numeric", "Quran 2:255", want{TraditionQuran, WorkQuran, "", 2, 255, 0}},
 		{"quran/numeric_colon_after_alias", "quran:2:255", want{TraditionQuran, WorkQuran, "", 2, 255, 0}},
+		{"quran/numeric_dot_after_alias", "quran.2.255", want{TraditionQuran, WorkQuran, "", 2, 255, 0}},
 		{"quran/numeric_lower", "quran 2:255", want{TraditionQuran, WorkQuran, "", 2, 255, 0}},
 		{"quran/zh", "古兰经 2:255", want{TraditionQuran, WorkQuran, "", 2, 255, 0}},
 		{"quran/zh_first_surah", "古兰经 1:1", want{TraditionQuran, WorkQuran, "", 1, 1, 0}},

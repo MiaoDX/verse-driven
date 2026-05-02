@@ -200,7 +200,8 @@ sets `disable-model-invocation: true` so the model never auto-triggers it.
 Codex Mode A is wired entirely through the `config.toml` snippet
 `init --target=codex` writes (the `UserPromptSubmit` hook calls
 `scripture-mcp lookup-from-prompt`, which recognizes the canonical inline
-marker syntax `[[bible:John 3:16]]` plus ergonomic aliases like `$dao:11`).
+marker syntax `[[bible:John 3:16]]` plus ergonomic aliases like `$dao:11`,
+`$dao.11`, and `$bible.John.3.16`).
 
 In addition, the adapter ships:
 

@@ -11,9 +11,9 @@ allowed-tools:
 
 A manual fallback for the inline marker flow used by the Codex
 `UserPromptSubmit` hook. The canonical form is `[[bible:John 3:16]]`; short
-aliases such as `$dao:11` are also supported. Use this skill when the user
-wants to preview a verse and explicitly choose whether to inject it as a
-one-turn reflective frame.
+aliases such as `$dao:11`, `$dao.11`, and `$bible.John.3.16` are also
+supported. Use this skill when the user wants to preview a verse and
+explicitly choose whether to inject it as a one-turn reflective frame.
 
 This skill is **manually invoked only**. The `agents/openai.yaml` companion
 file sets `allow_implicit_invocation: false` so the model never auto-triggers
@@ -37,10 +37,11 @@ ask which tradition and reference they want.
 4. If the user declines, stop. Do not retain the verse in your reply
    beyond the preview.
 5. If the user confirms, instruct them to send their next coding
-   request with an inline marker (e.g. `[[bible:John 3:16]] Refactor X.`
-   or `$dao:11 Refactor X.`) so the `UserPromptSubmit` hook performs the
-   one-turn injection. Do not try to inject the envelope yourself: the hook
-   is the only path that produces the temporary, turn-bounded
+   request with an inline marker (e.g. `[[bible:John 3:16]] Refactor X.`,
+   `$dao:11 Refactor X.`, or `$bible.John.3.16 Refactor X.`) so the
+   `UserPromptSubmit` hook performs the one-turn injection. Do not try to
+   inject the envelope yourself: the hook is the only path that produces
+   the temporary, turn-bounded
    developer-context block this project guarantees.
 
 ## Invariants

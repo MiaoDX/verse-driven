@@ -127,6 +127,7 @@ func parseQuranNumeric(rest string) (Reference, error) {
 	if rest == "" {
 		return Reference{}, fmt.Errorf("%w: quran reference missing surah/verse", ErrUnrecognized)
 	}
+	rest = normalizeDottedChapterVerse(rest)
 	if c, v, ve, ok := parseChapterVerse(rest); ok {
 		if c < 1 || v < 1 {
 			return Reference{}, fmt.Errorf("%w: surah and verse must be >= 1", ErrInvalidNumber)
@@ -146,7 +147,48 @@ func trimAliasSeparator(rest string) string {
 	rest = strings.TrimSpace(rest)
 	rest = strings.TrimPrefix(rest, ":")
 	rest = strings.TrimPrefix(rest, "：")
+	rest = strings.TrimPrefix(rest, ".")
 	return strings.TrimSpace(rest)
+}
+
+func normalizeDottedChapterVerse(rest string) string {
+	parts := strings.Split(rest, ".")
+	if len(parts) < 2 || !digitsOnly(parts[0]) || !verseToken(parts[1]) {
+		return rest
+	}
+	out := parts[0] + ":" + parts[1]
+	if len(parts) > 2 {
+		out += "." + strings.Join(parts[2:], ".")
+	}
+	return out
+}
+
+func digitsOnly(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func verseToken(s string) bool {
+	if s == "" {
+		return false
+	}
+	for i, r := range s {
+		if r >= '0' && r <= '9' {
+			continue
+		}
+		if (r == '-' || r == '–') && i > 0 {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 func parseQuranSurahByName(rest string) (Reference, error) {

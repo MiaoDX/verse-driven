@@ -160,6 +160,25 @@ func TestLookupFromPromptDollarDaoAlias(t *testing.T) {
 	}
 }
 
+func TestLookupFromPromptDollarDaoDotAlias(t *testing.T) {
+	in := strings.NewReader("Please $dao.11 keep going on the helper.")
+	var out bytes.Buffer
+	if code := runLookupFromPrompt([]string{"--hook-event=UserPromptSubmit"}, Streams{In: in, Out: &out, Err: &bytes.Buffer{}}); code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	var resp struct {
+		HookSpecificOutput struct {
+			AdditionalContext string `json:"additionalContext"`
+		} `json:"hookSpecificOutput"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &resp); err != nil {
+		t.Fatalf("output not JSON: %v\n%s", err, out.String())
+	}
+	if !strings.Contains(resp.HookSpecificOutput.AdditionalContext, "道德经") {
+		t.Errorf("dao envelope missing display ref:\n%s", resp.HookSpecificOutput.AdditionalContext)
+	}
+}
+
 func TestLookupFromPromptDollarBibleAliasTrimsTrailingPrompt(t *testing.T) {
 	in := strings.NewReader("Please $bible:John 3:16 refactor the helper.")
 	var out bytes.Buffer
@@ -179,10 +198,52 @@ func TestLookupFromPromptDollarBibleAliasTrimsTrailingPrompt(t *testing.T) {
 	}
 }
 
+func TestLookupFromPromptDollarBibleDotAlias(t *testing.T) {
+	cases := []string{
+		"Please $bible.John.3.16 refactor the helper.",
+		"Please $bible.1.John.3.16 refactor the helper.",
+		"Please $bible.Song.of.Solomon.1.1 refactor the helper.",
+	}
+	for _, input := range cases {
+		t.Run(input, func(t *testing.T) {
+			var out bytes.Buffer
+			if code := runLookupFromPrompt([]string{"--hook-event=UserPromptSubmit"}, Streams{In: strings.NewReader(input), Out: &out, Err: &bytes.Buffer{}}); code != 0 {
+				t.Fatalf("exit %d", code)
+			}
+			var resp struct {
+				HookSpecificOutput struct {
+					AdditionalContext string `json:"additionalContext"`
+				} `json:"hookSpecificOutput"`
+			}
+			if err := json.Unmarshal(out.Bytes(), &resp); err != nil {
+				t.Fatalf("output not JSON: %v\n%s", err, out.String())
+			}
+			if !strings.Contains(resp.HookSpecificOutput.AdditionalContext, "<scripture_card>") {
+				t.Errorf("bible envelope missing scripture card:\n%s", resp.HookSpecificOutput.AdditionalContext)
+			}
+		})
+	}
+}
+
 func TestLookupFromPromptDollarSkillNameDoesNotTrigger(t *testing.T) {
 	var out bytes.Buffer
 	code := runLookupFromPrompt(nil, Streams{
 		In:  strings.NewReader("$setup-matt-pocock-skills"),
+		Out: &out,
+		Err: &bytes.Buffer{},
+	})
+	if code != 0 {
+		t.Errorf("exit %d, want 0", code)
+	}
+	if out.Len() != 0 {
+		t.Errorf("expected no output for unrelated $skill syntax, got: %q", out.String())
+	}
+}
+
+func TestLookupFromPromptDollarSkillDotNameDoesNotTrigger(t *testing.T) {
+	var out bytes.Buffer
+	code := runLookupFromPrompt(nil, Streams{
+		In:  strings.NewReader("$setup.matt.pocock.skills"),
 		Out: &out,
 		Err: &bytes.Buffer{},
 	})

@@ -169,7 +169,8 @@ it manually as a smoke test.
 
 ### What
 The full Codex adapter. Mode A via `UserPromptSubmit` hook with canonical
-marker syntax `[[bible:John 3:16]]` and ergonomic aliases such as `$dao:11`.
+marker syntax `[[bible:John 3:16]]` and ergonomic aliases such as `$dao:11`,
+`$dao.11`, and `$bible.John.3.16`.
 Mode B via shell wrapper `cdx` since Codex has no `Stop` hook equivalent.
 
 ### Acceptance criteria
@@ -179,7 +180,7 @@ Mode B via shell wrapper `cdx` since Codex has no `Stop` hook equivalent.
 - [ ] `agents/openai.yaml` sets `allow_implicit_invocation: false`
 - [ ] `[features] codex_hooks = true` in config template
 - [ ] `UserPromptSubmit` hook calls `scripture-mcp lookup-from-prompt`
-- [ ] Submitting `[[bible:John 3:16]] Refactor X.` or `$dao:11 Refactor X.` → model sees verse only this turn
+- [ ] Submitting `[[bible:John 3:16]] Refactor X.`, `$dao:11 Refactor X.`, or `$dao.11 Refactor X.` → model sees verse only this turn
 - [ ] Without a marker, hook exits with no `additionalContext`
 
 **Mode B:**

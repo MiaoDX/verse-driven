@@ -186,10 +186,12 @@ var (
 	reSlashMarker = regexp.MustCompile(`(?i)(?:^|\s)/(bible|dao|sutra|quran)(?:[ \t]+([^\n]*))?`)
 	// [[bible:John 3:16]]   [[dao:11]]   [[sutra]]   [[quran:2:255]]
 	reInlineMarker = regexp.MustCompile(`(?i)\[\[(bible|dao|sutra|quran)(?::([^\]\n]*))?\]\]`)
-	// $dao:11   $bible:John 3:16   $sutra   $quran:2:255
+	// $dao:11   $dao.11   $bible:John 3:16   $bible.John.3.16
+	// $sutra   $quran:2:255   $quran.2.255
 	// This is intentionally restricted to known tradition names so it
 	// does not collide with $skill-name invocation syntax.
-	reDollarMarker = regexp.MustCompile(`(?i)(?:^|\s)\$(bible|dao|sutra|quran)(?::([^\n]*))?`)
+	reDollarMarker = regexp.MustCompile(`(?i)(?:^|\s)\$(bible|dao|sutra|quran)(?:([:.])([^\n]*))?`)
+	reVerseToken   = regexp.MustCompile(`^\d+(?:[\-–]\d+)?$`)
 )
 
 // resolveTrailing attempts to resolve a reference, progressively trimming
@@ -267,7 +269,12 @@ func scanMarker(prompt string) (tradition, ref string, ok bool) {
 		full := strings.TrimSpace(prompt[m[0]:m[1]])
 		sub := reDollarMarker.FindStringSubmatch(full)
 		if best == nil || m[0] < best.idx {
-			best = &hit{idx: m[0], tradition: strings.ToLower(sub[1]), ref: strings.TrimSpace(sub[2])}
+			tradition := strings.ToLower(sub[1])
+			best = &hit{
+				idx:       m[0],
+				tradition: tradition,
+				ref:       normalizeDollarRef(tradition, sub[2], sub[3]),
+			}
 		}
 	}
 	if best == nil {
@@ -279,4 +286,58 @@ func scanMarker(prompt string) (tradition, ref string, ok bool) {
 		return "", "", false
 	}
 	return best.tradition, best.ref, true
+}
+
+func normalizeDollarRef(tradition, separator, raw string) string {
+	ref := strings.TrimSpace(raw)
+	if separator != "." {
+		return ref
+	}
+	switch tradition {
+	case "bible":
+		return normalizeDottedBibleRef(ref)
+	case "quran":
+		return normalizeDottedChapterVerseRef(ref)
+	default:
+		return ref
+	}
+}
+
+func normalizeDottedBibleRef(ref string) string {
+	head, tail := splitRefHeadTail(ref)
+	parts := strings.Split(head, ".")
+	if len(parts) >= 3 && isDigits(parts[len(parts)-2]) && reVerseToken.MatchString(parts[len(parts)-1]) {
+		book := strings.Join(parts[:len(parts)-2], " ")
+		return strings.TrimSpace(book + " " + parts[len(parts)-2] + ":" + parts[len(parts)-1] + tail)
+	}
+	return strings.TrimSpace(strings.ReplaceAll(head, ".", " ") + tail)
+}
+
+func normalizeDottedChapterVerseRef(ref string) string {
+	head, tail := splitRefHeadTail(ref)
+	parts := strings.Split(head, ".")
+	if len(parts) >= 2 && isDigits(parts[0]) && reVerseToken.MatchString(parts[1]) {
+		return strings.TrimSpace(parts[0] + ":" + parts[1] + tail)
+	}
+	return ref
+}
+
+func splitRefHeadTail(ref string) (head, tail string) {
+	idx := strings.IndexAny(ref, " \t")
+	if idx < 0 {
+		return ref, ""
+	}
+	return ref[:idx], ref[idx:]
+}
+
+func isDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
