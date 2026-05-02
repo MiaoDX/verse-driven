@@ -19,8 +19,5 @@ The agent's prompt for this task is the `description` field in
 copied) read-write before the run; tests run against the post-edit
 state.
 
-## Remaining fixtures
-
-The other nine fixtures referenced by `tasks.json` follow the same
-convention but are not yet vendored. Adding them is tracked as part
-of the remaining work for issue #8 — see the issue's checklist.
+All ten fixtures referenced by `tasks.json` follow this same
+convention; this directory is the original template.
