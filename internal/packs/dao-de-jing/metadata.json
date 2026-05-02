@@ -1,0 +1,15 @@
+{
+  "attribution": "《道德經》, Project Gutenberg eBook #7337 (produced by Ching-yi Chen). Simplified-Chinese rendering via OpenCC t2s.",
+  "build_date": "2026-05-02",
+  "edition_id": "pg7337-laozi-s",
+  "inclusion_mode": "bundled",
+  "lang": "zh-Hans",
+  "license": "Public domain",
+  "provider": "Project Gutenberg eBook #7337",
+  "sensitivity": "sacred_exact_quote",
+  "source_url": "https://www.gutenberg.org/cache/epub/7337/pg7337.txt",
+  "tradition": "dao",
+  "transform": "OpenCC t2s (Traditional → Simplified)",
+  "verse_count": 81,
+  "work": "daodejing"
+}

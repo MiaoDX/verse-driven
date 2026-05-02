@@ -1,0 +1,14 @@
+{
+  "attribution": "《般若波罗蜜多心经》, translated by Xuanzang (玄奘, Tang dynasty, c. 649 CE). Public domain text; CBETA digital edition has its own redistribution terms.",
+  "build_date": "2026-05-02",
+  "edition_id": "xuanzang-heart-sutra",
+  "inclusion_mode": "api_only",
+  "lang": "zh-Hans",
+  "license": "See pack release notes",
+  "note": "Stub pack: text not yet bundled. Issue #3 notes permit api-only fallback while CBETA terms are being reviewed.",
+  "provider": "CBETA (pending license audit)",
+  "source_url": "https://cbetaonline.dila.edu.tw/zh/T0251_001",
+  "tradition": "sutra",
+  "verse_count": 0,
+  "work": "heart-sutra"
+}

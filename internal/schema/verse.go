@@ -55,7 +55,9 @@ var (
 )
 
 var (
-	idPattern       = regexp.MustCompile(`^[a-z0-9]+(\.[a-z0-9]+)+$`)
+	// id segments are lowercase alphanumerics with optional hyphens
+	// (e.g. "1-samuel", "song-of-solomon", "heart-sutra").
+	idPattern       = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*(\.[a-z0-9]+(?:-[a-z0-9]+)*)+$`)
 	checksumPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
 )
 
