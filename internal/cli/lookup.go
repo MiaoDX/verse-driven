@@ -207,7 +207,24 @@ var (
 // chapter/verse and ignores trailing input.
 func resolveTrailing(tradition, rest string) (schema.Verse, error) {
 	if tradition == "sutra" {
-		return resolveAndLookup("sutra")
+		cur := strings.TrimSpace(rest)
+		if cur == "" {
+			return resolveAndLookup("心经")
+		}
+		var lastErr error
+		for {
+			v, err := resolveAndLookup(cur)
+			if err == nil {
+				return v, nil
+			}
+			lastErr = err
+			idx := strings.LastIndexAny(cur, " \t")
+			if idx < 0 {
+				break
+			}
+			cur = strings.TrimSpace(cur[:idx])
+		}
+		return schema.Verse{}, lastErr
 	}
 	cur := strings.TrimSpace(rest)
 	candidate := func() string {

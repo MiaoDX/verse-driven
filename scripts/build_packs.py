@@ -21,6 +21,7 @@ import os
 import re
 import sys
 import urllib.request
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -28,6 +29,8 @@ PACKS_DIR = ROOT / "internal" / "packs"
 
 KJV_URL = "https://www.gutenberg.org/cache/epub/10/pg10.txt"
 DAO_URL = "https://www.gutenberg.org/cache/epub/7337/pg7337.txt"
+SUTRA_XML_URL = "https://raw.githubusercontent.com/cbeta-org/xml-p5/master/T/T08/T08n0251.xml"
+SUTRA_SOURCE_URL = "https://cbetaonline.dila.edu.tw/zh/T0251_001"
 
 # ---------- shared helpers ----------
 
@@ -39,6 +42,18 @@ def _fetch(url: str) -> str:
     req = urllib.request.Request(url, headers={"User-Agent": "verse-driven/0.1 pack-builder"})
     with urllib.request.urlopen(req, timeout=120) as r:
         return r.read().decode("utf-8-sig")
+
+
+def _t2s(text: str) -> str:
+    try:
+        from opencc import OpenCC
+    except ImportError:
+        raise RuntimeError(
+            "opencc-python-reimplemented is required to rebuild zh-Hans packs; "
+            "install it in a virtualenv before running `make packs`"
+        ) from None
+    cc = OpenCC("t2s")
+    return cc.convert(text)
 
 
 def _write_pack(name: str, verses: list[dict], metadata: dict) -> None:
@@ -321,13 +336,7 @@ def _parse_cn_numeral(s: str) -> int:
 
 
 def _t2s_dao(text: str) -> str:
-    try:
-        from opencc import OpenCC
-    except ImportError:
-        print("[dao] opencc-python-reimplemented not installed; skipping t->s conversion", file=sys.stderr)
-        return text
-    cc = OpenCC("t2s")
-    return cc.convert(text)
+    return _t2s(text)
 
 
 def build_dao() -> None:
@@ -415,27 +424,96 @@ def build_dao() -> None:
 
 
 # ---------- 心经 ----------
-# CBETA's redistribution terms for the Xuanzang translation are non-trivial to
-# audit at build time, and our reachable upstream sources don't reliably
-# return the canonical text. Per issue #3 notes ("fall back to api-only mode
-# for that pack if uncertain"), we ship the heart-sutra pack with
-# inclusion_mode = api_only and 0 bundled verses. The registry still surfaces
-# the pack via metadata.json, and a future PR can vendor verses once the
-# CBETA license review is complete.
+
+def _local_name(tag: str) -> str:
+    return tag.rsplit("}", 1)[-1]
+
+
+def _tei_attr(el: ET.Element, name: str) -> str:
+    return el.attrib.get(name, el.attrib.get(f"{{http://www.w3.org/XML/1998/namespace}}{name}", ""))
+
+
+def _tei_text(el: ET.Element) -> str:
+    """Extract reading text from a small CBETA TEI subtree.
+
+    We keep lemma readings in apparatus entries and skip line/page anchors,
+    notes, and metadata-only nodes. Tails are retained so inline markup does
+    not accidentally concatenate adjacent readings.
+    """
+    tag = _local_name(el.tag)
+    if tag in {"lb", "pb", "anchor", "note", "mulu"}:
+        return el.tail or ""
+    if tag == "app":
+        parts: list[str] = []
+        for child in el:
+            if _local_name(child.tag) == "lem":
+                parts.append(_tei_text(child))
+                break
+        parts.append(el.tail or "")
+        return "".join(parts)
+
+    parts = [el.text or ""]
+    for child in el:
+        parts.append(_tei_text(child))
+    parts.append(el.tail or "")
+    return "".join(parts)
+
+
+def _extract_sutra_body(xml_text: str) -> str:
+    root = ET.fromstring(xml_text)
+    jing = None
+    for div in root.iter():
+        if _local_name(div.tag) == "div" and _tei_attr(div, "type") == "jing":
+            jing = div
+            break
+    if jing is None:
+        raise RuntimeError("SUTRA: TEI div type=jing not found")
+
+    paragraphs: list[str] = []
+    for p in jing.iter():
+        if _local_name(p.tag) != "p":
+            continue
+        text = re.sub(r"\s+", "", _tei_text(p))
+        if text:
+            paragraphs.append(text)
+    if not paragraphs:
+        raise RuntimeError("SUTRA: no body paragraphs parsed")
+    return "\n".join(paragraphs)
 
 def build_sutra() -> None:
-    verses: list[dict] = []
+    print("[sutra] downloading...")
+    raw = _fetch(SUTRA_XML_URL)
+    traditional = _extract_sutra_body(raw)
+    simplified = _t2s(traditional)
+    verses: list[dict] = [{
+        "id": "sutra.heart-sutra.1",
+        "tradition": "sutra",
+        "lang": "zh-Hans",
+        "work": "heart-sutra",
+        "canonical_ref": {"chapter": 1, "verse_start": 1},
+        "text": simplified,
+        "source": {
+            "provider": "CBETA XML P5 T0251",
+            "license": "Ancient source text; CBETA digital edition terms apply",
+            "attribution": "《般若波罗蜜多心经》, translated by Xuanzang (玄奘), CBETA XML P5 T0251.",
+        },
+        "checksum_sha256": _sha256(simplified),
+        "inclusion_mode": "bundled",
+        "sensitivity": "sacred_exact_quote",
+    }]
     meta = {
         "tradition": "sutra",
         "work": "heart-sutra",
         "lang": "zh-Hans",
-        "provider": "CBETA (pending license audit)",
-        "source_url": "https://cbetaonline.dila.edu.tw/zh/T0251_001",
-        "license": "See pack release notes",
-        "attribution": "《般若波罗蜜多心经》, translated by Xuanzang (玄奘, Tang dynasty, c. 649 CE). Public domain text; CBETA digital edition has its own redistribution terms.",
+        "provider": "CBETA XML P5 T0251",
+        "source_url": SUTRA_SOURCE_URL,
+        "license": "Ancient source text; CBETA digital edition terms apply",
+        "attribution": "《般若波罗蜜多心经》, translated by Xuanzang (玄奘), CBETA XML P5 T0251.",
         "edition_id": "xuanzang-heart-sutra",
-        "inclusion_mode": "api_only",
-        "note": "Stub pack: text not yet bundled. Issue #3 notes permit api-only fallback while CBETA terms are being reviewed.",
+        "inclusion_mode": "bundled",
+        "sensitivity": "sacred_exact_quote",
+        "transform": "CBETA XML P5 body extraction; OpenCC t2s (Traditional → Simplified)",
+        "note": "Bundled for non-commercial release use; source page links to the original CBETA edition.",
     }
     _write_pack("heart-sutra", verses, meta)
 

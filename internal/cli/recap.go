@@ -27,13 +27,36 @@ func runRecap(args []string, s Streams) int {
 	tradition := fs.String("tradition", "", "limit to one tradition: bible|dao|sutra|quran")
 	terminal := fs.Bool("terminal", false, "print pretty terminal output (default behavior)")
 	firstLetter := fs.Bool("first-letter", false, "mask all-but-first character of each word/character (memory mode)")
+	learning := fs.Bool("learning", false, "select and schedule verses from ~/.config/scripture-mcp/learning.json")
 	seed := fs.Int64("seed", 0, "deterministic seed; 0 = time-based (default)")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
 	_ = terminal // accepted for compatibility; the CLI prints to terminal regardless
+	useLearning := *learning
+	if !useLearning {
+		enabled, err := learningEnabledFromConfig(s)
+		if err != nil {
+			fmt.Fprintln(s.Err, "error:", err)
+			return 1
+		}
+		useLearning = enabled
+	}
 
-	v, ok := pickRecapVerse(*tradition, *seed)
+	var (
+		v   schema.Verse
+		ok  bool
+		err error
+	)
+	if useLearning {
+		v, ok, err = pickLearningRecapVerse(*tradition, *seed, s)
+		if err != nil {
+			fmt.Fprintln(s.Err, "error:", err)
+			return 1
+		}
+	} else {
+		v, ok = pickRecapVerse(*tradition, *seed)
+	}
 	if !ok {
 		fmt.Fprintln(s.Err, "error: no bundled verses available for tradition", *tradition)
 		return 1
@@ -133,4 +156,3 @@ func isWordRune(r rune) bool {
 	}
 	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
 }
-

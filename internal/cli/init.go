@@ -10,7 +10,7 @@ import (
 )
 
 // runInit implements `scripture-mcp init --target={claude-code,codex}
-// [--recap=on|off] [--uninstall]`.
+// [--recap=on|off] [--learning=keep|on|off] [--uninstall]`.
 //
 // Idempotent: rerunning with the same flags is a no-op once the snippet
 // is installed. We never overwrite the user's config — we splice in (or
@@ -20,6 +20,7 @@ func runInit(args []string, s Streams) int {
 	fs.SetOutput(s.Err)
 	target := fs.String("target", "", "agent target: claude-code|codex")
 	recap := fs.String("recap", "on", "enable Mode B recap: on|off")
+	learning := fs.String("learning", "keep", "enable learning mode in user config: keep|on|off")
 	uninstall := fs.Bool("uninstall", false, "remove the snippet instead of installing it")
 	dryRun := fs.Bool("dry-run", false, "print what would change without writing")
 	if err := fs.Parse(args); err != nil {
@@ -35,29 +36,61 @@ func runInit(args []string, s Streams) int {
 		fmt.Fprintln(s.Err, "error: --recap must be on|off")
 		return 2
 	}
+	switch *learning {
+	case "keep", "on", "off":
+	default:
+		fmt.Fprintln(s.Err, "error: --learning must be keep|on|off")
+		return 2
+	}
 	home, err := homeDir(s)
 	if err != nil {
 		fmt.Fprintln(s.Err, "error:", err)
 		return 1
 	}
 
+	var (
+		path        string
+		beginMarker string
+		endMarker   string
+		snippet     string
+		isCodex     bool
+	)
 	switch *target {
 	case "claude-code":
-		path := filepath.Join(home, ".claude", "settings.json")
-		return manageSnippet(path, "// >>> verse-driven", "// <<< verse-driven",
-			renderClaudeSnippet(*recap == "on"), *uninstall, *dryRun, s)
+		path = filepath.Join(home, ".claude", "settings.json")
+		beginMarker = "// >>> verse-driven"
+		endMarker = "// <<< verse-driven"
+		snippet = renderClaudeSnippet(*recap == "on")
 	case "codex":
-		path := filepath.Join(home, ".codex", "config.toml")
-		code := manageSnippet(path, "# >>> verse-driven", "# <<< verse-driven",
-			renderCodexSnippet(*recap == "on"), *uninstall, *dryRun, s)
-		if code == 0 && !*dryRun && !*uninstall && *recap == "on" {
-			printCdxAliasHint(s.Out)
-		}
-		return code
+		path = filepath.Join(home, ".codex", "config.toml")
+		beginMarker = "# >>> verse-driven"
+		endMarker = "# <<< verse-driven"
+		snippet = renderCodexSnippet(*recap == "on")
+		isCodex = true
 	default:
 		fmt.Fprintf(s.Err, "error: unknown target %q (want claude-code|codex)\n", *target)
 		return 2
 	}
+	code := manageSnippet(path, beginMarker, endMarker, snippet, *uninstall, *dryRun, s)
+	if code != 0 {
+		return code
+	}
+	if *learning != "keep" {
+		enabled := *learning == "on"
+		cfgPath := userConfigPath(home)
+		if *dryRun {
+			fmt.Fprintf(s.Out, "verse-driven: would write %s\n", cfgPath)
+		} else if err := writeUserConfig(home, userConfig{Version: 1, LearningEnabled: enabled}); err != nil {
+			fmt.Fprintln(s.Err, "error:", err)
+			return 1
+		} else {
+			fmt.Fprintf(s.Out, "verse-driven: learning mode %s in %s\n", *learning, cfgPath)
+		}
+	}
+	if isCodex && !*dryRun && !*uninstall && *recap == "on" {
+		printCdxAliasHint(s.Out)
+	}
+	return 0
 }
 
 // printCdxAliasHint emits the wrapper-setup instructions for Codex Mode B.

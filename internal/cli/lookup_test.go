@@ -80,13 +80,23 @@ func TestRunLookupMissingArg(t *testing.T) {
 	}
 }
 
-func TestRunLookupSutraIsApiOnly(t *testing.T) {
-	var errBuf bytes.Buffer
-	if code := runLookup([]string{"心经"}, Streams{Out: &bytes.Buffer{}, Err: &errBuf}); code != 1 {
-		t.Errorf("exit code = %d, want 1", code)
+func TestRunLookupSutraBundled(t *testing.T) {
+	var out, errBuf bytes.Buffer
+	if code := runLookup([]string{"心经"}, Streams{Out: &out, Err: &errBuf}); code != 0 {
+		t.Fatalf("exit %d, stderr=%q", code, errBuf.String())
 	}
-	if !strings.Contains(errBuf.String(), "not bundled") {
-		t.Errorf("stderr should explain api-only state:\n%s", errBuf.String())
+	var v schema.Verse
+	if err := json.Unmarshal(out.Bytes(), &v); err != nil {
+		t.Fatalf("output is not JSON Verse: %v\n%s", err, out.String())
+	}
+	if v.ID != "sutra.heart-sutra.1" {
+		t.Errorf("id %q, want sutra.heart-sutra.1", v.ID)
+	}
+	if v.InclusionMode != "bundled" {
+		t.Errorf("inclusion_mode %q, want bundled", v.InclusionMode)
+	}
+	if v.ChecksumSHA256 == "" {
+		t.Error("checksum_sha256 missing")
 	}
 }
 
@@ -176,6 +186,33 @@ func TestLookupFromPromptDollarDaoDotAlias(t *testing.T) {
 	}
 	if !strings.Contains(resp.HookSpecificOutput.AdditionalContext, "道德经") {
 		t.Errorf("dao envelope missing display ref:\n%s", resp.HookSpecificOutput.AdditionalContext)
+	}
+}
+
+func TestLookupFromPromptSlashSutraChineseAlias(t *testing.T) {
+	in := strings.NewReader("/sutra 心经 refactor the formatter.")
+	var out, errBuf bytes.Buffer
+	if code := runLookupFromPrompt([]string{"--hook-event=UserPromptExpansion"}, Streams{In: in, Out: &out, Err: &errBuf}); code != 0 {
+		t.Fatalf("exit %d, stderr=%s", code, errBuf.String())
+	}
+	if out.Len() == 0 {
+		t.Fatalf("expected hook JSON output, got none; stderr=%s", errBuf.String())
+	}
+	var resp struct {
+		HookSpecificOutput struct {
+			HookEventName     string `json:"hookEventName"`
+			AdditionalContext string `json:"additionalContext"`
+		} `json:"hookSpecificOutput"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &resp); err != nil {
+		t.Fatalf("output not JSON: %v\n%s", err, out.String())
+	}
+	if resp.HookSpecificOutput.HookEventName != "UserPromptExpansion" {
+		t.Errorf("hookSpecificOutput hookEventName = %q, want UserPromptExpansion",
+			resp.HookSpecificOutput.HookEventName)
+	}
+	if !strings.Contains(resp.HookSpecificOutput.AdditionalContext, "心经") {
+		t.Errorf("sutra envelope missing display ref:\n%s", resp.HookSpecificOutput.AdditionalContext)
 	}
 }
 

@@ -12,12 +12,11 @@ Works with [Claude Code](https://claude.com/code) and
 [Codex](https://github.com/openai/codex). Local stdio MCP, zero remote dependency,
 zero impact on coding quality when not in use.
 
-> **Status:** v0.1 candidate, source-install ready. Core binary, CLI, MCP
-> server, Claude Code adapter, Codex adapter, lifecycle tests, and benchmark
-> fixtures are implemented. GitHub release artifacts are not published yet;
-> issue #8's lifecycle + coding-quality benchmark gate is published in
-> [`docs/benchmarks/v0.1.md`](./docs/benchmarks/v0.1.md). The remaining
-> release gate is issue #9 launch polish.
+> **Status:** v0.1.0 release. Core binary, CLI, MCP server, Claude Code
+> adapter, Codex adapter, lifecycle tests, benchmark fixtures, localized
+> aliases, learning mode, and bundled KJV / 道德经 / 心经 packs are implemented.
+> The issue #8 lifecycle + coding-quality benchmark gate is published in
+> [`docs/benchmarks/v0.1.md`](./docs/benchmarks/v0.1.md).
 
 ---
 
@@ -65,6 +64,8 @@ to the agent's transcript.
 
 ### Mode A example
 
+![Mode A demo](./docs/assets/mode-a.gif)
+
 ```
 > /bible John 3:13
 
@@ -86,6 +87,8 @@ Codex uses inline markers instead of slash commands:
 ```
 
 ### Mode B example
+
+![Mode B demo](./docs/assets/mode-b.gif)
 
 ```
 [Claude Code finishes a long PR]
@@ -166,10 +169,21 @@ This single-binary / multi-interface design follows the pattern from
 
 ---
 
-## Install From Source
+## Install
 
-There is no published GitHub release yet. For the current checkout, build and
-install the local binary:
+Install the prebuilt v0.1.0 binary and wire detected agents with:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/MiaoDX/verse-driven/main/install.sh | bash
+```
+
+The release installer detects macOS / Linux and arm64 / x86_64, downloads the
+matching `scripture-mcp` tarball, installs it to `~/.local/bin` by default,
+and offers to wire Claude Code and Codex.
+
+### Install From Source
+
+For the current checkout, build and install the local binary:
 
 ```bash
 go test ./...
@@ -177,6 +191,14 @@ make build
 mkdir -p ~/.local/bin
 cp bin/scripture-mcp ~/.local/bin/scripture-mcp
 chmod +x ~/.local/bin/scripture-mcp
+```
+
+If you are building from mainland China and Go module downloads are slow or
+blocked, set a Go proxy before running the build:
+
+```bash
+go env -w GOPROXY=https://goproxy.cn,direct
+go env -w GOSUMDB=sum.golang.google.cn
 ```
 
 Make sure `~/.local/bin` is on `PATH`:
@@ -189,6 +211,7 @@ Then wire the agents:
 
 ```bash
 scripture-mcp init --target=codex
+scripture-mcp init --target=codex --learning=on   # optional SM-2 recap memory
 
 # Claude Code's current MCP registry is managed by the claude CLI:
 claude mcp add --scope user scripture -- scripture-mcp serve
@@ -199,17 +222,7 @@ Install the static adapter assets shown below. They are intentionally separate
 from `init` today so users can inspect the slash commands, output style, and
 skills before copying or symlinking them.
 
-### Release Installer Status
-
-`install.sh` exists and is tested, but it expects release tarballs that have
-not been published yet. Once v0.1.0 is released, the intended one-line install
-path is:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/MiaoDX/verse-driven/main/install.sh | bash
-```
-
-Release installer behavior:
+### Release Installer Behavior
 
 1. Detects your OS (macOS / Linux) and arch (arm64 / x86_64), downloads
    the matching `scripture-mcp` release binary, and installs it to
@@ -236,8 +249,15 @@ Or, equivalently, manage just the wiring with `init` itself:
 ```bash
 scripture-mcp init --target=claude-code
 scripture-mcp init --target=codex
+scripture-mcp init --target=claude-code --learning=on
+scripture-mcp init --target=codex --learning=off
 scripture-mcp init --uninstall --target=claude-code   # remove
 ```
+
+Learning mode stores its schedule in
+`~/.config/scripture-mcp/learning.json`. When enabled, normal Mode B recaps
+select the next due verse with a small SM-2 style scheduler. Add
+`--first-letter` to `scripture-mcp recap` for a masked memory prompt.
 
 Homebrew / `apt` packages are not shipped yet.
 
@@ -342,11 +362,9 @@ plan. Current implementation status:
   and Codex hook events, and the 80-row live Claude/Codex coding-quality
   benchmark had 0 regressions vs baseline. See
   [`docs/benchmarks/v0.1.md`](./docs/benchmarks/v0.1.md).
-
-Remaining v0.1 release gate:
-
-- Issue #9: launch polish — localized aliases, learning-mode polish, GIFs,
-  changelog, release binaries, and announcement draft.
+- ✅ Issue #9 launch polish is implemented: localized aliases, bundled 心经,
+  learning-mode recap scheduling, README demos, changelog, release binaries,
+  and announcement draft.
 
 ---
 
@@ -356,7 +374,7 @@ Remaining v0.1 release gate:
 |---|---|---|---|
 | Bible KJV (en) | [Project Gutenberg](https://www.gutenberg.org/) eBook #10 | Public domain (US) | ✅ Bundled, 31,102 verses |
 | 道德经 (zh-Hans) | [Project Gutenberg](https://www.gutenberg.org/) eBook #7337 | Public domain | ✅ Bundled, 81 chapters |
-| 心经 (zh-Hans) | [CBETA](https://cbeta.org/) | Pending license audit | ⚠️ API-only stub, 0 bundled verses |
+| 心经 (zh-Hans) | [CBETA XML P5 T0251](https://cbetaonline.dila.edu.tw/zh/T0251_001) | Ancient source text; CBETA digital edition terms apply | ✅ Bundled, 1 complete text |
 | Quran | planned | pending | ❌ Resolver support only; no bundled text |
 | 中文圣经 | planned | complex licensing | ❌ Phase 2 |
 
@@ -391,9 +409,9 @@ Full reference list (including official Claude Code / Codex docs) lives in
 Code: MIT.
 Bundled data packs keep their own upstream attribution metadata. The current
 binary embeds KJV from Project Gutenberg eBook #10 and 道德经 from Project
-Gutenberg eBook #7337, both public-domain sources. Heart Sutra and Quran
-content are not bundled yet; those packs need license review and attribution
-work before release.
+Gutenberg eBook #7337, both public-domain sources, plus the Xuanzang Heart
+Sutra from CBETA XML P5 T0251 for this non-commercial release. Quran content
+is not bundled yet; that pack still needs license review and attribution work.
 
 ---
 

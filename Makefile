@@ -3,6 +3,7 @@
 BINARY := scripture-mcp
 CMD := ./cmd/scripture-mcp
 BUILD_DIR := bin
+STATICCHECK_VERSION := v0.6.1
 
 all: lint verify-packs test build
 
@@ -29,7 +30,7 @@ vet:
 	go vet ./...
 
 staticcheck:
-	@command -v staticcheck >/dev/null 2>&1 || go install honnef.co/go/tools/cmd/staticcheck@latest
+	@command -v staticcheck >/dev/null 2>&1 || go install honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION)
 	staticcheck ./...
 
 lint: vet staticcheck

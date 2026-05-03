@@ -61,6 +61,20 @@ func TestInitClaudeRecapOff(t *testing.T) {
 	}
 }
 
+func TestInitLearningOnWritesUserConfig(t *testing.T) {
+	home := tempHome(t)
+	if _, errOut, code := runInitWithHome(t, home, "--target=claude-code", "--learning=on"); code != 0 {
+		t.Fatalf("exit %d: %s", code, errOut)
+	}
+	body, err := os.ReadFile(filepath.Join(home, ".config", "scripture-mcp", "config.json"))
+	if err != nil {
+		t.Fatalf("config.json not created: %v", err)
+	}
+	if !strings.Contains(string(body), `"learning_enabled": true`) {
+		t.Errorf("learning config not enabled:\n%s", body)
+	}
+}
+
 func TestInitIdempotent(t *testing.T) {
 	home := tempHome(t)
 	if _, _, code := runInitWithHome(t, home, "--target=claude-code"); code != 0 {

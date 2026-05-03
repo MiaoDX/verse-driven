@@ -56,8 +56,8 @@ func printHelp() {
 	fmt.Println("  scripture-mcp serve                              start stdio MCP server")
 	fmt.Println("  scripture-mcp lookup \"<ref>\" [--format=json|text] resolve and print a verse")
 	fmt.Println("  scripture-mcp lookup-from-prompt                 hook integration (stdin → JSON)")
-	fmt.Println("  scripture-mcp recap [--tradition=<t>] [--terminal] [--first-letter] [--seed=<n>]")
-	fmt.Println("  scripture-mcp init --target={claude-code|codex} [--recap=on|off] [--uninstall]")
+	fmt.Println("  scripture-mcp recap [--tradition=<t>] [--terminal] [--first-letter] [--learning] [--seed=<n>]")
+	fmt.Println("  scripture-mcp init --target={claude-code|codex} [--recap=on|off] [--learning=keep|on|off] [--uninstall]")
 }
 
 func runServe(args []string) int {

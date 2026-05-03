@@ -54,16 +54,16 @@ func TestDaoCounts(t *testing.T) {
 	}
 }
 
-func TestHeartSutraStub(t *testing.T) {
+func TestHeartSutraBundled(t *testing.T) {
 	pack := All().Pack(PackHeartSutra)
 	if pack == nil {
 		t.Fatal("PackHeartSutra missing")
 	}
-	if got := len(pack.Verses()); got != 0 {
-		t.Errorf("HeartSutra is shipped api-only; got %d verses, want 0", got)
+	if got := len(pack.Verses()); got != 1 {
+		t.Errorf("HeartSutra verse count: got %d, want 1", got)
 	}
-	if pack.Meta.InclusionMode != "api_only" {
-		t.Errorf("HeartSutra inclusion_mode: got %q, want %q", pack.Meta.InclusionMode, "api_only")
+	if pack.Meta.InclusionMode != "bundled" {
+		t.Errorf("HeartSutra inclusion_mode: got %q, want %q", pack.Meta.InclusionMode, "bundled")
 	}
 }
 
@@ -84,6 +84,7 @@ func TestSpotChecksums(t *testing.T) {
 		{"bible.kjv.revelation.22.21", "76128832e1fddeeda339fb4424682d629e372e7965425ba19efbf31038b54ab2"},
 		// Dao chapter 11 is the README example ("三十辐共一毂...").
 		{"dao.daodejing.11.1", "81ba9b4c9a51241154bf5f1c7a8b37d16234717b4f29c9522b58d04ad73d95b3"},
+		{"sutra.heart-sutra.1", "08cd20f4996c4b7f44b5978fbc65f6d82e738a3f3a01b2715303d7d94852fff2"},
 	}
 	r := All()
 	for _, c := range cases {

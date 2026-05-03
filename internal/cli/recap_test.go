@@ -2,14 +2,21 @@ package cli
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
 func TestRecapDeterministicWithSeed(t *testing.T) {
+	home := tempHome(t)
 	var a, b bytes.Buffer
 	for _, w := range []*bytes.Buffer{&a, &b} {
-		if code := runRecap([]string{"--seed=42"}, Streams{Out: w, Err: &bytes.Buffer{}}); code != 0 {
+		if code := runRecap([]string{"--seed=42"}, Streams{
+			Out:    w,
+			Err:    &bytes.Buffer{},
+			HomeFn: func() (string, error) { return home, nil },
+		}); code != 0 {
 			t.Fatalf("exit %d", code)
 		}
 	}
@@ -19,8 +26,13 @@ func TestRecapDeterministicWithSeed(t *testing.T) {
 }
 
 func TestRecapTraditionFilter(t *testing.T) {
+	home := tempHome(t)
 	var out bytes.Buffer
-	if code := runRecap([]string{"--tradition=dao", "--seed=1"}, Streams{Out: &out, Err: &bytes.Buffer{}}); code != 0 {
+	if code := runRecap([]string{"--tradition=dao", "--seed=1"}, Streams{
+		Out:    &out,
+		Err:    &bytes.Buffer{},
+		HomeFn: func() (string, error) { return home, nil },
+	}); code != 0 {
 		t.Fatalf("exit %d", code)
 	}
 	if !strings.Contains(out.String(), "道德经") {
@@ -29,8 +41,13 @@ func TestRecapTraditionFilter(t *testing.T) {
 }
 
 func TestRecapBibleHasAttribution(t *testing.T) {
+	home := tempHome(t)
 	var out bytes.Buffer
-	if code := runRecap([]string{"--tradition=bible", "--seed=7"}, Streams{Out: &out, Err: &bytes.Buffer{}}); code != 0 {
+	if code := runRecap([]string{"--tradition=bible", "--seed=7"}, Streams{
+		Out:    &out,
+		Err:    &bytes.Buffer{},
+		HomeFn: func() (string, error) { return home, nil },
+	}); code != 0 {
 		t.Fatalf("exit %d", code)
 	}
 	s := out.String()
@@ -43,8 +60,13 @@ func TestRecapBibleHasAttribution(t *testing.T) {
 }
 
 func TestRecapFirstLetterMode(t *testing.T) {
+	home := tempHome(t)
 	var out bytes.Buffer
-	if code := runRecap([]string{"--tradition=bible", "--seed=7", "--first-letter"}, Streams{Out: &out, Err: &bytes.Buffer{}}); code != 0 {
+	if code := runRecap([]string{"--tradition=bible", "--seed=7", "--first-letter"}, Streams{
+		Out:    &out,
+		Err:    &bytes.Buffer{},
+		HomeFn: func() (string, error) { return home, nil },
+	}); code != 0 {
 		t.Fatalf("exit %d", code)
 	}
 	// First-letter masking replaces letters past the first with `_`.
@@ -56,9 +78,98 @@ func TestRecapFirstLetterMode(t *testing.T) {
 	}
 }
 
+func TestRecapLearningUsesDueCardFromState(t *testing.T) {
+	home := tempHome(t)
+	cfgDir := filepath.Join(home, ".config", "scripture-mcp")
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	state := `{
+  "version": 1,
+  "cards": {
+    "dao.daodejing.11.1": {
+      "repetitions": 0,
+      "interval_days": 0,
+      "ease_factor": 2.5,
+      "due": "2000-01-01T00:00:00Z"
+    },
+    "bible.kjv.john.3.16": {
+      "repetitions": 1,
+      "interval_days": 6,
+      "ease_factor": 2.5,
+      "due": "2999-01-01T00:00:00Z"
+    }
+  }
+}`
+	if err := os.WriteFile(filepath.Join(cfgDir, "learning.json"), []byte(state), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var out, errBuf bytes.Buffer
+	code := runRecap([]string{"--learning"}, Streams{
+		Out:    &out,
+		Err:    &errBuf,
+		HomeFn: func() (string, error) { return home, nil },
+	})
+	if code != 0 {
+		t.Fatalf("exit %d, stderr=%s", code, errBuf.String())
+	}
+	if !strings.Contains(out.String(), "道德经 第11章") {
+		t.Errorf("learning recap did not select due card; output:\n%s", out.String())
+	}
+	body, err := os.ReadFile(filepath.Join(cfgDir, "learning.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), `"last_seen"`) {
+		t.Errorf("learning state was not updated:\n%s", string(body))
+	}
+}
+
+func TestRecapUsesLearningConfig(t *testing.T) {
+	home := tempHome(t)
+	cfgDir := filepath.Join(home, ".config", "scripture-mcp")
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(cfgDir, "config.json"), []byte(`{"version":1,"learning_enabled":true}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	state := `{
+  "version": 1,
+  "cards": {
+    "dao.daodejing.11.1": {
+      "repetitions": 0,
+      "interval_days": 0,
+      "ease_factor": 2.5,
+      "due": "2000-01-01T00:00:00Z"
+    }
+  }
+}`
+	if err := os.WriteFile(filepath.Join(cfgDir, "learning.json"), []byte(state), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var out, errBuf bytes.Buffer
+	code := runRecap(nil, Streams{
+		Out:    &out,
+		Err:    &errBuf,
+		HomeFn: func() (string, error) { return home, nil },
+	})
+	if code != 0 {
+		t.Fatalf("exit %d, stderr=%s", code, errBuf.String())
+	}
+	if !strings.Contains(out.String(), "道德经 第11章") {
+		t.Errorf("configured learning recap did not select due card; output:\n%s", out.String())
+	}
+}
+
 func TestRecapUnknownTradition(t *testing.T) {
+	home := tempHome(t)
 	var errBuf bytes.Buffer
-	code := runRecap([]string{"--tradition=nonsense", "--seed=1"}, Streams{Out: &bytes.Buffer{}, Err: &errBuf})
+	code := runRecap([]string{"--tradition=nonsense", "--seed=1"}, Streams{
+		Out:    &bytes.Buffer{},
+		Err:    &errBuf,
+		HomeFn: func() (string, error) { return home, nil },
+	})
 	if code != 1 {
 		t.Errorf("exit %d, want 1 for unknown tradition; stderr=%q", code, errBuf.String())
 	}

@@ -59,10 +59,10 @@ func TestReferenceID(t *testing.T) {
 
 func TestReferenceIDErrors(t *testing.T) {
 	cases := []resolver.Reference{
-		{Tradition: "bible", Work: "KJV", Chapter: 3, VerseStart: 16}, // missing book
+		{Tradition: "bible", Work: "KJV", Chapter: 3, VerseStart: 16},   // missing book
 		{Tradition: "bible", Work: "KJV", Book: "John", VerseStart: 16}, // missing chapter
-		{Tradition: "dao", Work: "daodejing"},                          // missing chapter
-		{Tradition: "quran", Work: "quran", VerseStart: 1},             // missing surah
+		{Tradition: "dao", Work: "daodejing"},                           // missing chapter
+		{Tradition: "quran", Work: "quran", VerseStart: 1},              // missing surah
 		{Tradition: "unknown"},
 	}
 	for i, ref := range cases {
@@ -105,10 +105,16 @@ func TestLookupReferenceDaoFound(t *testing.T) {
 	}
 }
 
-func TestLookupReferenceSutraNotBundled(t *testing.T) {
-	_, err := LookupReference(resolver.Reference{Tradition: "sutra", Work: "heart-sutra"})
-	if !errors.Is(err, ErrNotBundled) {
-		t.Errorf("got %v, want ErrNotBundled", err)
+func TestLookupReferenceSutraFound(t *testing.T) {
+	v, err := LookupReference(resolver.Reference{Tradition: "sutra", Work: "heart-sutra"})
+	if err != nil {
+		t.Fatalf("LookupReference err: %v", err)
+	}
+	if v.ID != "sutra.heart-sutra.1" {
+		t.Errorf("got id %q", v.ID)
+	}
+	if v.Tradition != "sutra" {
+		t.Errorf("got tradition %q", v.Tradition)
 	}
 }
 
