@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">One-turn injection and terminal-only recap flow</title>
+  <desc id="desc">Manual markers enter the current model call only; recap output is printed to terminal and stays outside model input.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="11" markerHeight="11" refX="9" refY="5.5" orient="auto">
+      <path d="M0,0 L11,5.5 L0,11 z" fill="#8bd5ff"/>
+    </marker>
+    <marker id="arrow2" markerWidth="11" markerHeight="11" refX="9" refY="5.5" orient="auto">
+      <path d="M0,0 L11,5.5 L0,11 z" fill="#f2cc60"/>
+    </marker>
+    <style>
+      .bg { fill: #0f1419; }
+      .box { fill: #171d24; stroke: #334155; stroke-width: 1.4; }
+      .safe { fill: #14251c; stroke: #3fb950; stroke-width: 1.5; }
+      .term { fill: #252014; stroke: #d29922; stroke-width: 1.5; }
+      .title { font: 700 24px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #f5f7fa; letter-spacing: 0; }
+      .text { font: 500 17px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #c8d3dc; letter-spacing: 0; }
+      .mono { font: 600 15px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #b6f3cf; letter-spacing: 0; }
+      .muted { font: 500 15px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #8ea0ad; letter-spacing: 0; }
+      .pathA { fill: none; stroke: #8bd5ff; stroke-width: 3; marker-end: url(#arrow); }
+      .pathB { fill: none; stroke: #f2cc60; stroke-width: 3; stroke-dasharray: 9 10; marker-end: url(#arrow2); }
+    </style>
+  </defs>
+  <rect class="bg" width="1200" height="420" rx="24"/>
+
+  <text class="title" x="64" y="54">Two paths, physically separated</text>
+  <text class="muted" x="64" y="84">Mode A can enter the current model call. Mode B never does.</text>
+
+  <rect class="box" x="64" y="132" width="210" height="96" rx="16"/>
+  <text class="text" x="92" y="170">user marker</text>
+  <text class="mono" x="92" y="198">/dao 11</text>
+
+  <rect class="box" x="358" y="132" width="210" height="96" rx="16"/>
+  <text class="text" x="386" y="170">local resolver</text>
+  <text class="muted" x="386" y="198">pack + checksum</text>
+
+  <rect class="safe" x="652" y="132" width="210" height="96" rx="16"/>
+  <text class="text" x="680" y="170">scripture_card</text>
+  <text class="muted" x="680" y="198">current turn only</text>
+
+  <rect class="box" x="946" y="132" width="190" height="96" rx="16"/>
+  <text class="text" x="974" y="170">model call</text>
+  <text class="muted" x="974" y="198">coding task</text>
+
+  <path class="pathA" d="M274 180H358"/>
+  <path class="pathA" d="M568 180H652"/>
+  <path class="pathA" d="M862 180H946"/>
+
+  <rect class="box" x="64" y="290" width="250" height="76" rx="16"/>
+  <text class="text" x="92" y="322">agent finishes task</text>
+  <text class="muted" x="92" y="348">Stop hook or cdx wrapper</text>
+
+  <rect class="term" x="448" y="290" width="250" height="76" rx="16"/>
+  <text class="text" x="476" y="322">terminal recap</text>
+  <text class="muted" x="476" y="348">outside transcript</text>
+
+  <rect class="safe" x="832" y="290" width="304" height="76" rx="16"/>
+  <text class="text" x="860" y="322">next model input</text>
+  <text class="muted" x="860" y="348">no recap, no previous card</text>
+
+  <path class="pathB" d="M314 328H448"/>
+  <path class="pathB" d="M698 328H832"/>
+</svg>

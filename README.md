@@ -1,189 +1,47 @@
 # Verse-Driven Development
 
-> *"三十辐共一毂，当其无，有车之用。" — 道德经 第十一章*
-> *"Look at the birds of the air, they neither sow nor reap." — Matthew 6:26*
+[![CI](https://github.com/MiaoDX/verse-driven/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MiaoDX/verse-driven/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/MiaoDX/verse-driven?sort=semver)](https://github.com/MiaoDX/verse-driven/releases)
+[![Go](https://img.shields.io/badge/go-1.24.7-00ADD8?logo=go)](./go.mod)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+[![Benchmark Gate](https://img.shields.io/badge/benchmark-v0.1%20passed-success)](./docs/benchmarks/v0.1.md)
+[![MCP](https://img.shields.io/badge/MCP-local%20stdio-blueviolet)](#why-local-stdio-mcp)
 
-A coding-agent extension that lets you frame coding tasks with passages from
-wisdom literature — currently KJV Bible and 道德经, with Heart Sutra/Quran
-adapters stubbed for later data work — **without polluting the agent's
-coding context**.
+Optional scripture framing for coding agents, built so the framing never
+quietly becomes permanent coding context.
 
-Works with [Claude Code](https://claude.com/code) and
-[Codex](https://github.com/openai/codex). Local stdio MCP, zero remote dependency,
-zero impact on coding quality when not in use.
+![Generated concept banner for Verse-Driven Development](./docs/assets/readme-generated-banner.png)
 
-> **Status:** v0.1.0 release. Core binary, CLI, MCP server, Claude Code
-> adapter, Codex adapter, lifecycle tests, benchmark fixtures, localized
-> aliases, learning mode, and bundled KJV / 道德经 / 心经 packs are implemented.
-> The issue #8 lifecycle + coding-quality benchmark gate is published in
-> [`docs/benchmarks/v0.1.md`](./docs/benchmarks/v0.1.md).
+`scripture-mcp` is a single local Go binary for Claude Code and Codex. It
+serves bundled public-domain / attributed wisdom-literature packs through
+stdio MCP, CLI commands, and agent hooks.
 
----
+Current v0.1.0 status:
 
-## Why this exists
+- Released binaries for macOS arm64, macOS x86_64, and Linux x86_64.
+- Bundled packs: KJV Bible, 道德经, and 心经.
+- Adapter support: Claude Code and Codex.
+- Safety gate: one-turn injection lifecycle tests and coding-quality benchmark
+  passed for v0.1.0.
+- No remote service, no runtime Node/Python/Docker dependency.
 
-Writing code is a focused, technical act. But every now and then you want to
-pause and reframe — *"is this refactor preserving what users actually depend
-on, or am I just enjoying the cleanup?"* — and a well-chosen line from a
-classic text frames the moment differently than yet another stand-up checklist.
+## Quick Start
 
-Existing options didn't quite fit:
-
-- **Generic "zen-master" personas** ([example](https://github.com/hesreallyhim/awesome-claude-code-output-styles-that-i-really-like))
-  write fake-koan parodies, not real passages.
-- **Scripture MCP servers**
-  ([sacred-scriptures-mcp](https://github.com/Traves-Theberge/sacred-scriptures-mcp),
-  [quran-mcp](https://github.com/quran/quran-mcp), etc.) are built for
-  *studying* scripture, not for *using* scripture inside a coding session.
-- **Naive approaches** (put it in `CLAUDE.md`, `AGENTS.md`, an output style)
-  leak into the agent's permanent context and quietly degrade coding quality.
-
-VDD is the missing piece: a clean, agent-safe protocol for **optional,
-one-turn scripture framing** that defaults to silent.
-
-This continues a tradition that runs from
-[The Tao of Programming](https://www.mit.edu/~xela/tao.html) (1987) through
-the [Unix Koans of Master Foo](https://github.com/lumenwrites/fictionhub/blob/master/stories/The%20Unix%20Koans%20of%20Master%20Foo.md)
-to the [Zen of Python](https://peps.python.org/pep-0020/) — only this time
-with real source texts and a verifiable injection protocol.
-
----
-
-## Two modes, physically separated
-
-| | **Mode A: Manual** | **Mode B: Recap** |
-|---|---|---|
-| **Trigger** | User explicitly invokes a marker | After a coding task completes |
-| **Visible to model?** | ✅ Current turn only — gone next turn | ❌ Never. Printed to your terminal only |
-| **Use case** | Frame this task with a verse | Reflection / memory training |
-| **Default** | Silent. Nothing happens unless you ask | Off. Opt-in via init flag |
-
-The key invariant: **a verse never enters a model's input unless the user
-explicitly invoked it for that turn.** Mode B writes to your terminal, not
-to the agent's transcript.
-
-### Mode A example
-
-![Mode A demo](./docs/assets/mode-a.gif)
-
-```
-> /bible John 3:13
-
-John 3:13 (KJV)
-[visible verse preview]
-sha256:... · Project Gutenberg eBook #10 · Public domain (US)
-
-> Refactor this scheduler. Preserve the cron-string API.
-
-[Claude Code does the refactor; the verse was available for the slash-command turn only]
-```
-
-Codex uses inline markers instead of slash commands:
-
-```
-> $dao.11 Refactor this scheduler. Preserve the cron-string API.
-> $bible.John.3.13 Refactor this parser.
-> [[bible:John 3:13]] Refactor this parser.
-```
-
-### Mode B example
-
-![Mode B demo](./docs/assets/mode-b.gif)
-
-```
-[Claude Code finishes a long PR]
-
-— terminal printout, not seen by the model —
-📖 道德经 第十一章
-"三十辐共一毂，当其无，有车之用。"
-你写得最优雅的那部分接口，是你"没写"的部分。
-```
-
----
-
-## Architecture
-
-```
-                  ┌─ packs/        (bundled KJV + 道德经; Heart Sutra api-only stub)
-   shared core  ──┼─ resolver/     (reference parsing + checksum)
-                  └─ mcp-server/   (local stdio MCP)
-                            │
-              ┌─────────────┴─────────────┐
-              │                           │
-      Claude adapter                Codex adapter
-      ├─ slash commands            ├─ inline markers
-      ├─ output-style              ├─ skill (scripture-lookup)
-      ├─ skill (verse-inject)      ├─ UserPromptSubmit hook
-      └─ hooks (UserPromptExpansion + Stop)
-                                   └─ shell wrapper for recap
-```
-
-One Go binary, three invocation modes:
-
-```bash
-scripture-mcp serve                              # stdio MCP for cc/codex
-scripture-mcp lookup "John 3:13" --format=json   # CLI for hooks
-scripture-mcp recap --tradition=dao --terminal   # Mode B recap
-```
-
-Supported reference forms:
-
-```text
-# Claude Code slash commands
-/bible John 3:13
-/bible john.3.13
-/dao 11
-
-# Codex inline markers
-[[bible:John 3:13]]
-$bible:John 3:13
-$bible.John.3.13
-$dao:11
-$dao.11
-
-# Direct CLI/MCP lookup
-John 3:13
-dao 11
-dao.11
-quran.2.255   # parses, but Quran text is not bundled yet
-```
-
-**~80% of the code is shared between Claude Code and Codex.** Differences are
-mostly in config file format (`settings.json` vs `config.toml`) and Codex's
-recap path needs a shell wrapper (it has no `Stop` hook equivalent).
-
-This single-binary / multi-interface design follows the pattern from
-[Gentleman-Programming/engram](https://github.com/Gentleman-Programming/engram).
-
----
-
-## Why local stdio MCP
-
-- **Fast**: `stdio` is an in-process pipe — verse lookup completes in <5ms,
-  ~10× faster than HTTP/remote MCP
-- **Offline**: packs are embedded in the binary via `embed.FS`. Works on a
-  plane.
-- **No runtime dependencies**: single Go binary. No Node, no Python, no Docker.
-- **Standard protocol**: same MCP server works with Claude Code, Codex,
-  Gemini CLI, Cursor, OpenCode, Aider — anything MCP-compatible.
-
----
-
-## Install
-
-Install the prebuilt v0.1.0 binary and wire detected agents with:
+Install the latest release and wire detected agents:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/MiaoDX/verse-driven/main/install.sh | bash
 ```
 
-The release installer detects macOS / Linux and arm64 / x86_64, downloads the
-matching `scripture-mcp` tarball, installs it to `~/.local/bin` by default,
-and offers to wire Claude Code and Codex.
+Pin the release or skip agent wiring:
 
-### Install From Source
+```bash
+curl -fsSL https://raw.githubusercontent.com/MiaoDX/verse-driven/main/install.sh | bash -s -- --version v0.1.0
+curl -fsSL https://raw.githubusercontent.com/MiaoDX/verse-driven/main/install.sh | bash -s -- --no-wire
+curl -fsSL https://raw.githubusercontent.com/MiaoDX/verse-driven/main/install.sh | bash -s -- --prefix /usr/local/bin
+```
 
-For the current checkout, build and install the local binary:
+Build from source:
 
 ```bash
 go test ./...
@@ -191,235 +49,254 @@ make build
 mkdir -p ~/.local/bin
 cp bin/scripture-mcp ~/.local/bin/scripture-mcp
 chmod +x ~/.local/bin/scripture-mcp
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
-If you are building from mainland China and Go module downloads are slow or
-blocked, set a Go proxy before running the build:
+If Go module downloads are slow from mainland China:
 
 ```bash
 go env -w GOPROXY=https://goproxy.cn,direct
 go env -w GOSUMDB=sum.golang.google.cn
 ```
 
-Make sure `~/.local/bin` is on `PATH`:
+## What It Does
 
-```bash
-export PATH="$HOME/.local/bin:$PATH"
+Verse-Driven Development has two deliberately separate modes.
+
+| Mode | Trigger | Model sees it? | Purpose |
+|---|---|---:|---|
+| **Mode A: Manual frame** | You type a marker such as `/dao 11` or `$bible.John.3.13` | Current turn only | Use a passage as optional reflection for one coding task |
+| **Mode B: Recap** | Agent task finishes | Never | Print a terminal-only recap or memory prompt |
+
+The invariant is simple: a passage enters model input only when you explicitly
+ask for it, and only for that turn.
+
+![Isolation flow](./docs/assets/readme-flow.svg)
+
+## Examples
+
+Claude Code slash commands:
+
+```text
+/bible John 3:13
+/bible 约翰福音 3:16
+/dao 第十一章
+/sutra 心经
 ```
 
-Then wire the agents:
+Codex inline markers:
+
+```text
+$dao.11 Refactor this scheduler. Preserve the cron-string API.
+$bible.John.3.13 Refactor this parser.
+[[bible:John 3:13]] Refactor this parser.
+```
+
+Direct CLI lookup:
 
 ```bash
-scripture-mcp init --target=codex
-scripture-mcp init --target=codex --learning=on   # optional SM-2 recap memory
+scripture-mcp lookup "John 3:13" --format=json
+scripture-mcp lookup "道德经第十一章" --format=text
+scripture-mcp recap --terminal
+scripture-mcp recap --learning --first-letter
+```
 
-# Claude Code's current MCP registry is managed by the claude CLI:
-claude mcp add --scope user scripture -- scripture-mcp serve
+Mode A demo:
+
+![Mode A demo](./docs/assets/mode-a.gif)
+
+Mode B demo:
+
+![Mode B demo](./docs/assets/mode-b.gif)
+
+## Why This Exists
+
+Coding agents are sensitive to persistent context. Putting reflective or
+spiritual material in `AGENTS.md`, `CLAUDE.md`, output styles, always-on hooks,
+or system prompts can degrade normal engineering behavior because every future
+task inherits it.
+
+This project gives that workflow a narrower protocol:
+
+- default silent behavior;
+- explicit marker required for model-visible context;
+- local lookup with checksummed bundled packs;
+- one-turn-only injection envelope;
+- terminal-only recap path for memory/reflection;
+- automated leakage tests and coding-quality regression checks.
+
+It follows the lineage of *The Tao of Programming*, Unix koans, and the Zen of
+Python, but with real source texts and agent-context hygiene as the main design
+constraint.
+
+## Architecture
+
+![Verse-Driven Development system overview](./docs/assets/readme-hero.svg)
+
+One binary, multiple interfaces:
+
+```bash
+scripture-mcp serve                              # stdio MCP server
+scripture-mcp lookup "John 3:13" --format=json   # CLI lookup
+scripture-mcp lookup-from-prompt                 # hook JSON output
+scripture-mcp recap --terminal                   # terminal-only recap
+scripture-mcp init --target=codex                # config wiring
+```
+
+```text
+embedded packs ── resolver ── MCP server
+       │              │             │
+       │              │             ├─ Claude Code MCP
+       │              │             └─ Codex MCP
+       │              │
+       └──────────── CLI ── hooks ── one-turn scripture_card
+                         └───────── terminal-only recap
+```
+
+Most code is shared between Claude Code and Codex. The adapter-specific parts
+are intentionally thin: config shape, marker syntax, and Codex's `cdx` wrapper
+for recap because Codex has no Stop-hook equivalent.
+
+## Why Local Stdio MCP
+
+- **Fast:** lookup is local process I/O, not an HTTP round trip.
+- **Offline:** packs are embedded with `embed.FS`.
+- **Private:** no prompt or passage lookup leaves your machine.
+- **Portable:** one static-ish Go binary for MCP, CLI, hooks, and recap.
+- **Agent-neutral:** the same MCP server can be reused by other MCP-compatible
+  tools.
+
+## Agent Setup
+
+`scripture-mcp init` splices marker-fenced snippets into user config files and
+is safe to rerun.
+
+```bash
 scripture-mcp init --target=claude-code
-```
-
-Install the static adapter assets shown below. They are intentionally separate
-from `init` today so users can inspect the slash commands, output style, and
-skills before copying or symlinking them.
-
-### Release Installer Behavior
-
-1. Detects your OS (macOS / Linux) and arch (arm64 / x86_64), downloads
-   the matching `scripture-mcp` release binary, and installs it to
-   `~/.local/bin/scripture-mcp` (override with `--prefix`).
-2. Detects which coding agents are on `$PATH` (`claude`, `codex`) and
-   wires each by calling `scripture-mcp init --target=<agent>`. The
-   prompt reads from `/dev/tty`, so it still works under `curl | bash`;
-   pass `--yes` to skip confirmation.
-3. Re-running upgrades the binary in place; `init` is idempotent on
-   configs (it splices a marker-fenced block, never overwrites your
-   settings).
-
-Useful flags:
-
-```bash
-install.sh --version v0.1.0          # pin a specific release
-install.sh --prefix /usr/local/bin   # install elsewhere
-install.sh --no-wire                 # binary only, skip agent wiring
-install.sh --uninstall               # strip wiring + remove binary
-```
-
-Or, equivalently, manage just the wiring with `init` itself:
-
-```bash
-scripture-mcp init --target=claude-code
 scripture-mcp init --target=codex
-scripture-mcp init --target=claude-code --learning=on
-scripture-mcp init --target=codex --learning=off
-scripture-mcp init --uninstall --target=claude-code   # remove
+scripture-mcp init --target=codex --learning=on
+scripture-mcp init --target=claude-code --recap=off
+scripture-mcp init --uninstall --target=codex
 ```
 
-Learning mode stores its schedule in
-`~/.config/scripture-mcp/learning.json`. When enabled, normal Mode B recaps
-select the next due verse with a small SM-2 style scheduler. Add
-`--first-letter` to `scripture-mcp recap` for a masked memory prompt.
+Learning mode stores schedule data in
+`~/.config/scripture-mcp/learning.json`. It uses a small SM-2-style scheduler
+to select due recap cards. `--first-letter` masks the recap body for memory
+practice.
 
-Homebrew / `apt` packages are not shipped yet.
+### Claude Code Assets
 
-### Claude Code adapter assets
-
-In addition to the `settings.json` snippet that `init --target=claude-code`
-installs, the Claude adapter ships static assets you symlink (or copy) into
-your Claude config:
+`init --target=claude-code` installs the MCP and hook config. The repo also
+ships inspectable static assets:
 
 ```bash
-# Slash commands — preview visibly and inject for this turn.
-mkdir -p ~/.claude/commands
+mkdir -p ~/.claude/commands ~/.claude/output-styles ~/.claude/skills/verse-inject
 ln -s "$PWD/adapters/claude-code/commands/bible.md" ~/.claude/commands/bible.md
 ln -s "$PWD/adapters/claude-code/commands/dao.md" ~/.claude/commands/dao.md
 ln -s "$PWD/adapters/claude-code/commands/sutra.md" ~/.claude/commands/sutra.md
 ln -s "$PWD/adapters/claude-code/commands/quran.md" ~/.claude/commands/quran.md
-
-# Output style — turns on the <scripture_card> reading mode.
-mkdir -p ~/.claude/output-styles
 ln -s "$PWD/adapters/claude-code/output-styles/scripture-recap.md" \
       ~/.claude/output-styles/scripture-recap.md
-
-# Manual fallback skill — preview a verse without typing the slash marker.
-mkdir -p ~/.claude/skills/verse-inject
 ln -s "$PWD/adapters/claude-code/skills/verse-inject/SKILL.md" \
       ~/.claude/skills/verse-inject/SKILL.md
 ```
 
-These files are deliberately tiny and contain **no scripture text** — verses
-are fetched from the bundled MCP server at lookup time. The skill sets
-`disable-model-invocation: true` so the model never auto-triggers it.
+These files contain no passage bodies. They call the local binary at lookup
+time.
 
-### Codex adapter assets
+### Codex Assets
 
-Codex Mode A is wired entirely through the `config.toml` snippet
-`init --target=codex` writes (the `UserPromptSubmit` hook calls
-`scripture-mcp lookup-from-prompt`, which recognizes the canonical inline
-marker syntax `[[bible:John 3:16]]` plus ergonomic aliases like `$dao:11`,
-`$dao.11`, and `$bible.John.3.16`).
-
-In addition, the adapter ships:
+`init --target=codex` writes the MCP and `UserPromptSubmit` hook config.
+Optional skill and wrapper assets:
 
 ```bash
-# Manual fallback skill — preview before sending a marker.
 mkdir -p ~/.codex/skills/scripture-lookup/agents
 ln -s "$PWD/adapters/codex/skills/scripture-lookup/SKILL.md" \
       ~/.codex/skills/scripture-lookup/SKILL.md
 ln -s "$PWD/adapters/codex/skills/scripture-lookup/agents/openai.yaml" \
       ~/.codex/skills/scripture-lookup/agents/openai.yaml
 
-# Mode B recap wrapper — Codex has no Stop hook, so recap fires from
-# a thin shell wrapper that runs *outside* the Codex transcript.
 cp adapters/codex/wrapper/cdx ~/.local/bin/cdx
 chmod +x ~/.local/bin/cdx
-# Then run `cdx ...` instead of `codex ...`.
-# A PowerShell counterpart lives at adapters/codex/wrapper/cdx.ps1.
 ```
 
-The skill's `agents/openai.yaml` pins `allow_implicit_invocation: false`
-so the OpenAI/Codex model cannot auto-invoke `scripture-lookup` during a
-coding turn — it must be called by name. The skill body, like its Claude
-counterpart, contains **no scripture text**: verses are fetched from the
-bundled MCP server at lookup time.
+Run `cdx ...` instead of `codex ...` when you want Mode B recap. Launching
+`codex` directly bypasses recap by design, which keeps recap text outside the
+Codex transcript.
 
-**Codex skill path note:** official Codex docs and OSS repos disagree on
-whether per-user skills live under `~/.codex/skills`, `$CODEX_HOME/skills`,
-or `~/.agents/skills`. The snippets above use `~/.codex/skills`, matching
-the same `~/.codex/config.toml` location `init --target=codex` writes to.
-If your Codex build expects a different path, symlink the skill there
-instead.
+## Packs
 
-**Honest limitation:** the recap fires because the wrapping shell stays
-alive after `codex` exits and runs `scripture-mcp recap --terminal`.
-Launching `codex` directly (without `cdx`) bypasses the recap entirely.
-This is a deliberate physical-isolation trade-off — see [`plan.md`](./plan.md)
-§5.2 — and means there is no way for the recap text to leak into a future
-Codex `model_call` input.
+| Pack | Source | State |
+|---|---|---|
+| KJV Bible | [Project Gutenberg eBook #10](https://www.gutenberg.org/ebooks/10) | Bundled, 31,102 verses |
+| 道德经 | [Project Gutenberg eBook #7337](https://www.gutenberg.org/ebooks/7337) | Bundled, 81 chapters |
+| 心经 | [CBETA XML P5 T0251](https://cbetaonline.dila.edu.tw/zh/T0251_001) | Bundled, 1 complete text |
+| Quran | planned | Resolver only; no bundled text |
+| 中文圣经 | planned | Needs licensing work |
 
----
+Each bundled entry stores a SHA-256 checksum over the text bytes. CI verifies
+that pack text and checksum metadata stay in sync.
 
-## Roadmap
+## Verification
 
-See [`plan.md`](./plan.md) for the full design and
-[`docs/issues-backlog.md`](./docs/issues-backlog.md) for the 9-issue work
-plan. Current implementation status:
+The v0.1.0 release gate is published in
+[`docs/benchmarks/v0.1.md`](./docs/benchmarks/v0.1.md).
 
-- ✅ `scripture-mcp serve` runs and exposes MCP tools: `lookup`, `search`,
-  `random`, and `list_traditions`.
-- ✅ CLI commands exist for lookup, prompt-hook lookup, recap, and config init.
-- ✅ Claude Code Mode A works through slash commands such as `/bible John 3:13`
-  and `/dao 11`; the command shows a visible preview and injects the card for
-  that turn.
-- ✅ Codex Mode A works through `[[bible:John 3:13]]`, `$dao:11`, `$dao.11`,
-  and `$bible.John.3.13`.
-- ✅ Mode B recap is isolated: Claude uses a `Stop` hook, Codex uses the `cdx`
-  wrapper.
-- ✅ Local lifecycle simulations verify injected scripture disappears from later
-  model inputs, including 30-turn follow-up simulations.
-- ✅ Coding-quality benchmark scaffolding exists: 10 fixtures × 4 modes
-  (`baseline`, `preview-only`, `inject-once`, `recap-only`).
-- ✅ Issue #8 release gate passed: external lifecycle probe passed for Claude
-  and Codex hook events, and the 80-row live Claude/Codex coding-quality
-  benchmark had 0 regressions vs baseline. See
-  [`docs/benchmarks/v0.1.md`](./docs/benchmarks/v0.1.md).
-- ✅ Issue #9 launch polish is implemented: localized aliases, bundled 心经,
-  learning-mode recap scheduling, README demos, changelog, release binaries,
-  and announcement draft.
+What is tested:
 
----
+- injected context is available on turn N;
+- injected context is gone on later turns;
+- recap output does not enter future model inputs;
+- both Claude and Codex hook event shapes are covered;
+- 10 coding fixtures run across baseline, preview-only, inject-once, and
+  recap-only modes;
+- no tested mode regressed success rate versus baseline.
 
-## Pack Status
+Local checks:
 
-| Pack | Source | License | Current state |
-|---|---|---|---|
-| Bible KJV (en) | [Project Gutenberg](https://www.gutenberg.org/) eBook #10 | Public domain (US) | ✅ Bundled, 31,102 verses |
-| 道德经 (zh-Hans) | [Project Gutenberg](https://www.gutenberg.org/) eBook #7337 | Public domain | ✅ Bundled, 81 chapters |
-| 心经 (zh-Hans) | [CBETA XML P5 T0251](https://cbetaonline.dila.edu.tw/zh/T0251_001) | Ancient source text; CBETA digital edition terms apply | ✅ Bundled, 1 complete text |
-| Quran | planned | pending | ❌ Resolver support only; no bundled text |
-| 中文圣经 | planned | complex licensing | ❌ Phase 2 |
+```bash
+make lint
+python3 scripts/verify_quotes.py
+go test ./...
+make build
+```
 
----
+## Release
 
-## Acknowledgments
+Current release: [v0.1.0](https://github.com/MiaoDX/verse-driven/releases/tag/v0.1.0)
 
-This project stands on the shoulders of:
+Artifacts:
 
-- **[hesreallyhim/awesome-claude-code-output-styles-that-i-really-like](https://github.com/hesreallyhim/awesome-claude-code-output-styles-that-i-really-like)** —
-  the conceptual ancestor. Its `zen-master` and `existential-poet` output
-  styles proved that "switch to a reflective register while coding" is a real
-  workflow people want.
-- **[Traves-Theberge/sacred-scriptures-mcp](https://github.com/Traves-Theberge/sacred-scriptures-mcp)** —
-  the closest data-layer precedent. Demonstrated that a single MCP can serve
-  KJV / Quran / Tao Te Ching / Dhammapada in one place.
-- **[quran/quran-mcp](https://github.com/quran/quran-mcp)** — official Quran
-  Foundation MCP, reference for handling sacred-text fidelity.
-- **[Gentleman-Programming/engram](https://github.com/Gentleman-Programming/engram)** —
-  single-Go-binary / CLI + HTTP + MCP architecture template.
-- **[The Tao of Programming](https://www.mit.edu/~xela/tao.html)** &
-  **[Unix Koans of Master Foo](https://github.com/lumenwrites/fictionhub/blob/master/stories/The%20Unix%20Koans%20of%20Master%20Foo.md)** —
-  the spiritual lineage.
+- `scripture-mcp-v0.1.0-darwin-arm64.tar.gz`
+- `scripture-mcp-v0.1.0-darwin-x86_64.tar.gz`
+- `scripture-mcp-v0.1.0-linux-x86_64.tar.gz`
+- `checksums.txt`
 
-Full reference list (including official Claude Code / Codex docs) lives in
-[`plan.md`](./plan.md#10-参考资料).
-
----
-
-## License
-
-Code: MIT.
-Bundled data packs keep their own upstream attribution metadata. The current
-binary embeds KJV from Project Gutenberg eBook #10 and 道德经 from Project
-Gutenberg eBook #7337, both public-domain sources, plus the Xuanzang Heart
-Sutra from CBETA XML P5 T0251 for this non-commercial release. Quran content
-is not bundled yet; that pack still needs license review and attribution work.
-
----
+See [`CHANGELOG.md`](./CHANGELOG.md) for release notes.
 
 ## Contributing
 
-The core proof of concept is implemented and the issue #8 benchmark gate has
-passed. The best places to help now are issue #9 launch polish and additional
-data packs with clear source provenance.
+Useful next work:
 
-Tradition contributions especially welcome — if you can verify a pack against
-its canonical source and add the right attribution, please open a PR.
+- Quran pack with clear source provenance and attribution.
+- Chinese Bible pack research.
+- Homebrew formula.
+- Release workflow automation.
+- Additional lifecycle probes for other MCP-compatible agents.
+
+When touching pack data, avoid printing passage bodies in logs or PR text.
+Use checksums, counts, IDs, and source metadata for verification.
+
+## Acknowledgments
+
+- [hesreallyhim/awesome-claude-code-output-styles-that-i-really-like](https://github.com/hesreallyhim/awesome-claude-code-output-styles-that-i-really-like)
+- [Traves-Theberge/sacred-scriptures-mcp](https://github.com/Traves-Theberge/sacred-scriptures-mcp)
+- [quran/quran-mcp](https://github.com/quran/quran-mcp)
+- [Gentleman-Programming/engram](https://github.com/Gentleman-Programming/engram)
+- [The Tao of Programming](https://www.mit.edu/~xela/tao.html)
+- [The Zen of Python](https://peps.python.org/pep-0020/)
+
+## License
+
+Code is MIT licensed. Bundled data keeps its own upstream attribution metadata;
+see each pack's `metadata.json`.
