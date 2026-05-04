@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Adds bilingual bundled packs for Bible, Dao, Quran, and Heart Sutra.
+- Infers English versus Chinese edition from the matched reference alias.
+- Preserves per-language display references in compact pack rows.
+
 ## v0.1.0 - 2026-05-03
 
 Initial release of Verse-Driven Development.

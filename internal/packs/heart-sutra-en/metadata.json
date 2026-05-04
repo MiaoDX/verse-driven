@@ -1,0 +1,15 @@
+{
+  "attribution": "Shorter Prajnaparamita Hrdaya Sutra, Wikisource translation",
+  "build_date": "2026-05-04",
+  "edition_id": "wikisource-heart-sutra-en",
+  "inclusion_mode": "bundled",
+  "lang": "en",
+  "license": "Creative Commons Attribution-ShareAlike",
+  "note": "Bundled with source attribution; this is an English translation, not the Xuanzang Chinese text.",
+  "provider": "Wikisource",
+  "sensitivity": "sacred_exact_quote",
+  "source_url": "https://en.wikisource.org/w/index.php?title=Translation:Shorter_Praj%C3%B1%C4%81p%C4%81ramit%C4%81_H%E1%B9%9Bdaya_S%C5%ABtra&action=raw",
+  "tradition": "sutra",
+  "verse_count": 1,
+  "work": "heart-sutra-en"
+}

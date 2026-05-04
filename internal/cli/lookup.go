@@ -227,28 +227,18 @@ func resolveTrailing(tradition, rest string) (schema.Verse, error) {
 		return schema.Verse{}, lastErr
 	}
 	cur := strings.TrimSpace(rest)
-	candidate := func() string {
-		switch tradition {
-		case "bible":
-			return cur
-		default: // dao, quran
-			if cur == "" {
-				return tradition
-			}
-			return tradition + " " + cur
-		}
-	}
 	var lastErr error
 	for {
-		c := candidate()
-		if c == "" {
+		if cur == "" {
 			break
 		}
-		v, err := resolveAndLookup(c)
-		if err == nil {
-			return v, nil
+		for _, c := range markerCandidates(tradition, cur) {
+			v, err := resolveAndLookup(c)
+			if err == nil {
+				return v, nil
+			}
+			lastErr = err
 		}
-		lastErr = err
 		idx := strings.LastIndexAny(cur, " \t")
 		if idx < 0 {
 			break
@@ -259,6 +249,19 @@ func resolveTrailing(tradition, rest string) (schema.Verse, error) {
 		lastErr = fmt.Errorf("could not resolve %s reference", tradition)
 	}
 	return schema.Verse{}, lastErr
+}
+
+func markerCandidates(tradition, cur string) []string {
+	switch tradition {
+	case "bible":
+		return []string{cur}
+	case "dao", "quran":
+		// First try the raw ref so slash markers can carry a language-specific
+		// alias such as "/dao 道德经第十一章" or "/quran 古兰经 2:255".
+		return []string{cur, tradition + " " + cur}
+	default:
+		return []string{cur}
+	}
 }
 
 // scanMarker extracts (tradition, ref) from the leftmost marker in prompt.

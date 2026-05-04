@@ -100,6 +100,37 @@ func TestRunLookupSutraBundled(t *testing.T) {
 	}
 }
 
+func TestRunLookupBilingualPacks(t *testing.T) {
+	cases := []struct {
+		name string
+		ref  string
+		id   string
+		lang string
+	}{
+		{"bible_zh", "约翰福音 3:16", "bible.cuv-s.john.3.16", "zh-Hans"},
+		{"dao_en", "dao 11", "dao.legge.11.1", "en"},
+		{"dao_zh", "道德经 11", "dao.daodejing.11.1", "zh-Hans"},
+		{"sutra_en", "Heart Sutra", "sutra.heart-sutra-en.1", "en"},
+		{"quran_en", "Quran 2:255", "quran.pickthall.2.255", "en"},
+		{"quran_zh", "古兰经 2:255", "quran.majian.2.255", "zh-Hans"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var out, errBuf bytes.Buffer
+			if code := runLookup([]string{tc.ref}, Streams{Out: &out, Err: &errBuf}); code != 0 {
+				t.Fatalf("exit %d, stderr=%q", code, errBuf.String())
+			}
+			var v schema.Verse
+			if err := json.Unmarshal(out.Bytes(), &v); err != nil {
+				t.Fatalf("output is not JSON Verse: %v", err)
+			}
+			if v.ID != tc.id || v.Lang != tc.lang {
+				t.Errorf("lookup %q got id=%q lang=%q; want id=%q lang=%q", tc.ref, v.ID, v.Lang, tc.id, tc.lang)
+			}
+		})
+	}
+}
+
 func TestLookupFromPromptSlashMarker(t *testing.T) {
 	in := strings.NewReader("/bible John 3:16 Refactor the cron-string scheduler.")
 	var out, errBuf bytes.Buffer
@@ -141,8 +172,27 @@ func TestLookupFromPromptInlineMarker(t *testing.T) {
 	if err := json.Unmarshal(out.Bytes(), &resp); err != nil {
 		t.Fatalf("output not JSON: %v\n%s", err, out.String())
 	}
+	if !strings.Contains(resp.HookSpecificOutput.AdditionalContext, "Tao Te Ching") {
+		t.Errorf("dao envelope missing English display ref")
+	}
+}
+
+func TestLookupFromPromptInlineMarkerChineseDao(t *testing.T) {
+	in := strings.NewReader("Please [[dao:道德经第十一章]] keep going on the helper.")
+	var out bytes.Buffer
+	if code := runLookupFromPrompt(nil, Streams{In: in, Out: &out, Err: &bytes.Buffer{}}); code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	var resp struct {
+		HookSpecificOutput struct {
+			AdditionalContext string `json:"additionalContext"`
+		} `json:"hookSpecificOutput"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &resp); err != nil {
+		t.Fatalf("output not JSON: %v\n%s", err, out.String())
+	}
 	if !strings.Contains(resp.HookSpecificOutput.AdditionalContext, "道德经") {
-		t.Errorf("dao envelope missing display ref:\n%s", resp.HookSpecificOutput.AdditionalContext)
+		t.Errorf("dao envelope missing Chinese display ref")
 	}
 }
 
@@ -165,8 +215,8 @@ func TestLookupFromPromptDollarDaoAlias(t *testing.T) {
 		t.Errorf("hookSpecificOutput hookEventName = %q, want UserPromptSubmit",
 			resp.HookSpecificOutput.HookEventName)
 	}
-	if !strings.Contains(resp.HookSpecificOutput.AdditionalContext, "道德经") {
-		t.Errorf("dao envelope missing display ref:\n%s", resp.HookSpecificOutput.AdditionalContext)
+	if !strings.Contains(resp.HookSpecificOutput.AdditionalContext, "Tao Te Ching") {
+		t.Errorf("dao envelope missing English display ref")
 	}
 }
 
@@ -184,8 +234,8 @@ func TestLookupFromPromptDollarDaoDotAlias(t *testing.T) {
 	if err := json.Unmarshal(out.Bytes(), &resp); err != nil {
 		t.Fatalf("output not JSON: %v\n%s", err, out.String())
 	}
-	if !strings.Contains(resp.HookSpecificOutput.AdditionalContext, "道德经") {
-		t.Errorf("dao envelope missing display ref:\n%s", resp.HookSpecificOutput.AdditionalContext)
+	if !strings.Contains(resp.HookSpecificOutput.AdditionalContext, "Tao Te Ching") {
+		t.Errorf("dao envelope missing English display ref")
 	}
 }
 
@@ -338,8 +388,8 @@ func TestLookupFromPromptHookEventFlag(t *testing.T) {
 		t.Errorf("hookSpecificOutput hookEventName = %q, want UserPromptSubmit",
 			resp.HookSpecificOutput.HookEventName)
 	}
-	if !strings.Contains(resp.HookSpecificOutput.AdditionalContext, "道德经") {
-		t.Errorf("dao envelope missing display ref:\n%s", resp.HookSpecificOutput.AdditionalContext)
+	if !strings.Contains(resp.HookSpecificOutput.AdditionalContext, "Tao Te Ching") {
+		t.Errorf("dao envelope missing English display ref")
 	}
 	var raw map[string]any
 	if err := json.Unmarshal(out.Bytes(), &raw); err != nil {

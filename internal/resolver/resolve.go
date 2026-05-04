@@ -70,27 +70,31 @@ func Resolve(input string) (Reference, error) {
 	}
 	norm := strings.ToLower(trimmed)
 
-	if rest, ok := matchAlias(norm, sutraAliases); ok {
+	if rest, alias, ok := matchAlias(norm, sutraAliases); ok {
 		if strings.TrimSpace(rest) != "" {
 			return Reference{}, fmt.Errorf("%w: heart sutra takes no chapter/verse", ErrUnrecognized)
 		}
-		return Reference{Tradition: TraditionSutra, Work: WorkHeartSutra}, nil
+		work, lang := workLangForSutra(alias)
+		return Reference{Tradition: TraditionSutra, Work: work, Lang: lang}, nil
 	}
 
-	if rest, ok := matchAlias(norm, daoAliases); ok {
-		return parseDao(rest)
+	if rest, alias, ok := matchAlias(norm, daoAliases); ok {
+		work, lang := workLangForDao(alias)
+		return parseDao(rest, work, lang)
 	}
 
-	if rest, ok := matchAlias(norm, quranTextAliases); ok {
-		return parseQuranNumeric(rest)
+	if rest, alias, ok := matchAlias(norm, quranTextAliases); ok {
+		work, lang := workLangForQuran(alias)
+		return parseQuranNumeric(rest, work, lang)
 	}
-	if rest, ok := matchAlias(norm, surahKeywords); ok {
+	if rest, _, ok := matchAlias(norm, surahKeywords); ok {
 		return parseQuranSurahByName(rest)
 	}
 
 	for _, e := range bibleAliasIndex {
 		if rest, ok := tryMatchPrefix(norm, e.alias); ok {
-			return parseBible(e.canonical, rest)
+			work, lang := workLangForBible(e.alias)
+			return parseBible(e.canonical, rest, work, lang)
 		}
 	}
 
@@ -98,8 +102,8 @@ func Resolve(input string) (Reference, error) {
 		return Reference{}, &AmbiguousError{
 			Input: input,
 			Candidates: []Reference{
-				{Tradition: TraditionQuran, Work: WorkQuran, Chapter: c, VerseStart: v},
-				{Tradition: TraditionBible, Work: WorkKJV, Chapter: c, VerseStart: v},
+				{Tradition: TraditionQuran, Work: WorkQuranPickthall, Lang: "en", Chapter: c, VerseStart: v},
+				{Tradition: TraditionBible, Work: WorkKJV, Lang: "en", Chapter: c, VerseStart: v},
 			},
 		}
 	}
@@ -107,7 +111,7 @@ func Resolve(input string) (Reference, error) {
 	return Reference{}, fmt.Errorf("%w: %q", ErrUnrecognized, input)
 }
 
-func parseDao(rest string) (Reference, error) {
+func parseDao(rest, work, lang string) (Reference, error) {
 	rest = trimAliasSeparator(rest)
 	if r, ok := tryMatchPrefix(rest, "chapter"); ok {
 		rest = strings.TrimSpace(r)
@@ -119,10 +123,10 @@ func parseDao(rest string) (Reference, error) {
 	if !ok || n < 1 {
 		return Reference{}, fmt.Errorf("%w: dao chapter %q", ErrInvalidNumber, rest)
 	}
-	return Reference{Tradition: TraditionDao, Work: WorkDaodejing, Chapter: n}, nil
+	return Reference{Tradition: TraditionDao, Work: work, Lang: lang, Chapter: n}, nil
 }
 
-func parseQuranNumeric(rest string) (Reference, error) {
+func parseQuranNumeric(rest, work, lang string) (Reference, error) {
 	rest = trimAliasSeparator(rest)
 	if rest == "" {
 		return Reference{}, fmt.Errorf("%w: quran reference missing surah/verse", ErrUnrecognized)
@@ -135,10 +139,10 @@ func parseQuranNumeric(rest string) (Reference, error) {
 		if ve != 0 && ve < v {
 			return Reference{}, ErrInvalidRange
 		}
-		return Reference{Tradition: TraditionQuran, Work: WorkQuran, Chapter: c, VerseStart: v, VerseEnd: ve}, nil
+		return Reference{Tradition: TraditionQuran, Work: work, Lang: lang, Chapter: c, VerseStart: v, VerseEnd: ve}, nil
 	}
 	if n, ok := parseNumber(rest); ok && n >= 1 {
-		return Reference{Tradition: TraditionQuran, Work: WorkQuran, Chapter: n}, nil
+		return Reference{Tradition: TraditionQuran, Work: work, Lang: lang, Chapter: n}, nil
 	}
 	return Reference{}, fmt.Errorf("%w: quran reference %q", ErrInvalidNumber, rest)
 }
@@ -199,7 +203,7 @@ func parseQuranSurahByName(rest string) (Reference, error) {
 			continue
 		}
 		r = strings.TrimSpace(r)
-		ref := Reference{Tradition: TraditionQuran, Work: WorkQuran, Chapter: e.number}
+		ref := Reference{Tradition: TraditionQuran, Work: WorkQuranPickthall, Lang: "en", Chapter: e.number}
 		if r == "" {
 			return ref, nil
 		}
@@ -217,7 +221,7 @@ func parseQuranSurahByName(rest string) (Reference, error) {
 	return Reference{}, fmt.Errorf("%w: unknown surah %q", ErrUnrecognized, rest)
 }
 
-func parseBible(canonical, rest string) (Reference, error) {
+func parseBible(canonical, rest, work, lang string) (Reference, error) {
 	rest = strings.TrimSpace(rest)
 	if rest == "" {
 		return Reference{}, fmt.Errorf("%w: %s reference missing chapter", ErrUnrecognized, canonical)
@@ -231,7 +235,8 @@ func parseBible(canonical, rest string) (Reference, error) {
 		}
 		return Reference{
 			Tradition:  TraditionBible,
-			Work:       WorkKJV,
+			Work:       work,
+			Lang:       lang,
 			Book:       canonical,
 			Chapter:    c,
 			VerseStart: v,
@@ -241,7 +246,8 @@ func parseBible(canonical, rest string) (Reference, error) {
 	if n, ok := parseNumber(rest); ok && n >= 1 {
 		return Reference{
 			Tradition: TraditionBible,
-			Work:      WorkKJV,
+			Work:      work,
+			Lang:      lang,
 			Book:      canonical,
 			Chapter:   n,
 		}, nil
@@ -249,13 +255,50 @@ func parseBible(canonical, rest string) (Reference, error) {
 	return Reference{}, fmt.Errorf("%w: invalid bible reference %q", ErrInvalidNumber, rest)
 }
 
-func matchAlias(input string, aliases []string) (string, bool) {
+func matchAlias(input string, aliases []string) (rest, alias string, ok bool) {
 	for _, a := range aliases {
 		if rest, ok := tryMatchPrefix(input, a); ok {
-			return rest, true
+			return rest, a, true
 		}
 	}
-	return "", false
+	return "", "", false
+}
+
+func workLangForBible(alias string) (work, lang string) {
+	if containsHan(alias) {
+		return WorkCUVS, "zh-Hans"
+	}
+	return WorkKJV, "en"
+}
+
+func workLangForDao(alias string) (work, lang string) {
+	if containsHan(alias) {
+		return WorkDaodejing, "zh-Hans"
+	}
+	return WorkDaoLegge, "en"
+}
+
+func workLangForSutra(alias string) (work, lang string) {
+	if containsHan(alias) {
+		return WorkHeartSutra, "zh-Hans"
+	}
+	return WorkHeartSutraEn, "en"
+}
+
+func workLangForQuran(alias string) (work, lang string) {
+	if containsHan(alias) {
+		return WorkQuranMajian, "zh-Hans"
+	}
+	return WorkQuranPickthall, "en"
+}
+
+func containsHan(s string) bool {
+	for _, r := range s {
+		if r >= '\u4e00' && r <= '\u9fff' {
+			return true
+		}
+	}
+	return false
 }
 
 // tryMatchPrefix returns input[len(alias):] if input starts with alias and

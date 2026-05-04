@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Pack builder for KJV, 道德经, and 心经.
+"""Pack builder for bilingual Bible, Dao, Quran, and Heart Sutra packs.
 
 Downloads upstream public-domain sources, normalizes, and writes
 internal/packs/<name>/{verses.jsonl, metadata.json} files.
 
 Run:    python3 scripts/build_packs.py
-Output: internal/packs/{bible-kjv,dao-de-jing,heart-sutra}/
+Output: internal/packs/<pack-name>/
 
 The script intentionally prints no verse text — only structural info
 (verse counts, byte sizes, file paths, checksum spot-counts). This is
@@ -28,9 +28,14 @@ ROOT = Path(__file__).resolve().parent.parent
 PACKS_DIR = ROOT / "internal" / "packs"
 
 KJV_URL = "https://www.gutenberg.org/cache/epub/10/pg10.txt"
+CUV_S_URL = "https://raw.githubusercontent.com/seven1m/open-bibles/master/chi-cuv-simp.usfx.xml"
 DAO_URL = "https://www.gutenberg.org/cache/epub/7337/pg7337.txt"
+DAO_LEGGE_URL = "https://classics.mit.edu/Lao/taote.mb.txt"
 SUTRA_XML_URL = "https://raw.githubusercontent.com/cbeta-org/xml-p5/master/T/T08/T08n0251.xml"
 SUTRA_SOURCE_URL = "https://cbetaonline.dila.edu.tw/zh/T0251_001"
+SUTRA_EN_RAW_URL = "https://en.wikisource.org/w/index.php?title=Translation:Shorter_Praj%C3%B1%C4%81p%C4%81ramit%C4%81_H%E1%B9%9Bdaya_S%C5%ABtra&action=raw"
+QURAN_PICKTHALL_URL = "https://tanzil.net/trans/en.pickthall"
+QURAN_MAJIAN_URL = "https://tanzil.net/trans/zh.jian"
 
 # ---------- shared helpers ----------
 
@@ -64,7 +69,7 @@ def _write_pack(name: str, verses: list[dict], metadata: dict) -> None:
       internal/packs/<name>/metadata.json     - shared fields + verse_count
 
     Each line in verses.jsonl.gz is a compact object:
-      {"id": str, "c": int, "v": int, "ve"?: int, "b"?: str, "t": str, "s": hex64}
+      {"id": str, "c": int, "v": int, "ve"?: int, "b"?: str, "d"?: map, "t": str, "s": hex64}
 
     Pack-level fields (tradition, lang, work, source, sensitivity,
     inclusion_mode, default_lang display strings) live in metadata.json so
@@ -87,6 +92,8 @@ def _write_pack(name: str, verses: list[dict], metadata: dict) -> None:
             compact["ve"] = v["canonical_ref"]["verse_end"]
         if v["canonical_ref"].get("book"):
             compact["b"] = v["canonical_ref"]["book"]
+        if v.get("display_ref"):
+            compact["d"] = v["display_ref"]
         payload_lines.append(json.dumps(compact, ensure_ascii=False, sort_keys=True).encode("utf-8"))
     payload = b"\n".join(payload_lines) + (b"\n" if payload_lines else b"")
     # Pin mtime=0 in the gzip header so the archive is reproducible across builds.
@@ -176,6 +183,37 @@ KJV_BOOKS: list[tuple[str, str, str]] = [
     ("The General Epistle of Jude", "Jude", "jude"),
     ("The Revelation of Saint John the Divine", "Revelation", "revelation"),
 ]
+
+USFX_BOOK_CODES = [
+    "GEN", "EXO", "LEV", "NUM", "DEU", "JOS", "JDG", "RUT",
+    "1SA", "2SA", "1KI", "2KI", "1CH", "2CH", "EZR", "NEH", "EST",
+    "JOB", "PSA", "PRO", "ECC", "SNG", "ISA", "JER", "LAM", "EZK",
+    "DAN", "HOS", "JOL", "AMO", "OBA", "JON", "MIC", "NAM", "HAB",
+    "ZEP", "HAG", "ZEC", "MAL", "MAT", "MRK", "LUK", "JHN", "ACT",
+    "ROM", "1CO", "2CO", "GAL", "EPH", "PHP", "COL", "1TH", "2TH",
+    "1TI", "2TI", "TIT", "PHM", "HEB", "JAS", "1PE", "2PE", "1JN",
+    "2JN", "3JN", "JUD", "REV",
+]
+
+CUV_BOOK_NAMES = [
+    "创世记", "出埃及记", "利未记", "民数记", "申命记", "约书亚记", "士师记", "路得记",
+    "撒母耳记上", "撒母耳记下", "列王纪上", "列王纪下", "历代志上", "历代志下", "以斯拉记", "尼希米记", "以斯帖记",
+    "约伯记", "诗篇", "箴言", "传道书", "雅歌", "以赛亚书", "耶利米书", "耶利米哀歌", "以西结书",
+    "但以理书", "何西阿书", "约珥书", "阿摩司书", "俄巴底亚书", "约拿书", "弥迦书", "那鸿书", "哈巴谷书",
+    "西番雅书", "哈该书", "撒迦利亚书", "玛拉基书", "马太福音", "马可福音", "路加福音", "约翰福音", "使徒行传",
+    "罗马书", "哥林多前书", "哥林多后书", "加拉太书", "以弗所书", "腓立比书", "歌罗西书", "帖撒罗尼迦前书", "帖撒罗尼迦后书",
+    "提摩太前书", "提摩太后书", "提多书", "腓利门书", "希伯来书", "雅各书", "彼得前书", "彼得后书", "约翰一书",
+    "约翰二书", "约翰三书", "犹大书", "启示录",
+]
+
+CUV_BOOKS = {
+    code: {
+        "display": KJV_BOOKS[i][1],
+        "slug": KJV_BOOKS[i][2],
+        "zh": CUV_BOOK_NAMES[i],
+    }
+    for i, code in enumerate(USFX_BOOK_CODES)
+}
 
 VERSE_MARKER = re.compile(r"\b(\d+):(\d+)\b")
 START_MARKER = "*** START OF THE PROJECT GUTENBERG EBOOK THE KING JAMES VERSION OF THE BIBLE ***"
@@ -310,6 +348,79 @@ def build_kjv() -> None:
     _write_pack("bible-kjv", verses, meta)
 
 
+# ---------- Chinese Union Version Bible (Simplified) ----------
+
+def build_cuv_s() -> None:
+    print("[cuv-s] downloading...")
+    raw = _fetch(CUV_S_URL)
+    root = ET.fromstring(raw)
+    verses: list[dict] = []
+    seen_books: set[str] = set()
+    for book_el in root:
+        if _local_name(book_el.tag) != "book":
+            continue
+        code = book_el.attrib.get("id", "")
+        info = CUV_BOOKS.get(code)
+        if info is None:
+            raise RuntimeError(f"CUV-S: unknown USFX book code {code!r}")
+        seen_books.add(code)
+        chapter = 0
+        for child in book_el:
+            tag = _local_name(child.tag)
+            if tag == "c":
+                chapter = int(child.attrib["id"])
+                continue
+            if tag != "v":
+                continue
+            if chapter < 1:
+                raise RuntimeError(f"CUV-S: verse before chapter in {code}")
+            verse_id = child.attrib.get("id", "")
+            if not verse_id.isdigit():
+                raise RuntimeError(f"CUV-S: unsupported verse id {verse_id!r} in {code} {chapter}")
+            verse = int(verse_id)
+            text = re.sub(r"\s+", "", child.tail or "")
+            if not text:
+                raise RuntimeError(f"CUV-S: empty verse in {code} {chapter}:{verse}")
+            vid = f"bible.cuv-s.{info['slug']}.{chapter}.{verse}"
+            verses.append({
+                "id": vid,
+                "tradition": "bible",
+                "lang": "zh-Hans",
+                "work": "CUV-S",
+                "canonical_ref": {"book": info["display"], "chapter": chapter, "verse_start": verse},
+                "display_ref": {
+                    "zh-Hans": f"{info['zh']} {chapter}:{verse}",
+                    "en": f"{info['display']} {chapter}:{verse}",
+                },
+                "text": text,
+                "source": {
+                    "provider": "open-bibles",
+                    "license": "Public domain",
+                    "attribution": "Chinese Union Version (Simplified), open-bibles USFX",
+                },
+                "checksum_sha256": _sha256(text),
+                "inclusion_mode": "bundled",
+                "sensitivity": "sacred_exact_quote",
+            })
+    if seen_books != set(USFX_BOOK_CODES):
+        missing = sorted(set(USFX_BOOK_CODES) - seen_books)
+        raise RuntimeError(f"CUV-S: missing book codes: {missing}")
+    meta = {
+        "tradition": "bible",
+        "work": "CUV-S",
+        "lang": "zh-Hans",
+        "provider": "open-bibles",
+        "source_url": CUV_S_URL,
+        "license": "Public domain",
+        "attribution": "Chinese Union Version (Simplified), open-bibles USFX",
+        "edition_id": "open-bibles-cuv-simp",
+        "inclusion_mode": "bundled",
+        "sensitivity": "sacred_exact_quote",
+        "books": {KJV_BOOKS[i][2]: KJV_BOOKS[i][1] for i in range(len(KJV_BOOKS))},
+    }
+    _write_pack("bible-cuv-s", verses, meta)
+
+
 # ---------- 道德经 ----------
 
 DAO_START_MARKER = "*** START OF THE PROJECT GUTENBERG EBOOK"
@@ -423,6 +534,61 @@ def build_dao() -> None:
     _write_pack("dao-de-jing", verses, meta)
 
 
+def build_dao_legge() -> None:
+    print("[dao-legge] downloading...")
+    raw = _fetch(DAO_LEGGE_URL)
+    markers = list(re.finditer(r"\bChapter\s+(\d{1,2})\b", raw))
+    if len(markers) != 81:
+        raise RuntimeError(f"DAO-LEGGE: expected 81 chapter markers, found {len(markers)}")
+
+    verses: list[dict] = []
+    for i, m in enumerate(markers):
+        chapter = int(m.group(1))
+        if chapter != i + 1:
+            raise RuntimeError(f"DAO-LEGGE: chapter sequence broke at {chapter}, want {i + 1}")
+        start = m.end()
+        if i + 1 < len(markers):
+            end = markers[i + 1].start()
+        else:
+            end = raw.find("----------------------------------------------------------------------", start)
+            if end < 0:
+                end = len(raw)
+        text = re.sub(r"\s+", " ", raw[start:end]).strip()
+        if not text:
+            raise RuntimeError(f"DAO-LEGGE: empty body for chapter {chapter}")
+        vid = f"dao.legge.{chapter}.1"
+        verses.append({
+            "id": vid,
+            "tradition": "dao",
+            "lang": "en",
+            "work": "legge",
+            "canonical_ref": {"chapter": chapter, "verse_start": 1},
+            "display_ref": {"en": f"Tao Te Ching, Chapter {chapter}", "zh-Hans": f"道德经第{chapter}章"},
+            "text": text,
+            "source": {
+                "provider": "Internet Classics Archive",
+                "license": "Public domain source text",
+                "attribution": "Tao Te Ching, translated by James Legge (1891), Internet Classics Archive text",
+            },
+            "checksum_sha256": _sha256(text),
+            "inclusion_mode": "bundled",
+            "sensitivity": "sacred_exact_quote",
+        })
+    meta = {
+        "tradition": "dao",
+        "work": "legge",
+        "lang": "en",
+        "provider": "Internet Classics Archive",
+        "source_url": DAO_LEGGE_URL,
+        "license": "Public domain source text",
+        "attribution": "Tao Te Ching, translated by James Legge (1891), Internet Classics Archive text",
+        "edition_id": "legge-1891",
+        "inclusion_mode": "bundled",
+        "sensitivity": "sacred_exact_quote",
+    }
+    _write_pack("dao-legge", verses, meta)
+
+
 # ---------- 心经 ----------
 
 def _local_name(tag: str) -> str:
@@ -518,16 +684,175 @@ def build_sutra() -> None:
     _write_pack("heart-sutra", verses, meta)
 
 
+# ---------- Heart Sutra (English Wikisource translation) ----------
+
+def _clean_wikisource_translation(raw: str) -> str:
+    body: list[str] = []
+    for line in raw.splitlines():
+        s = line.strip()
+        if not s:
+            continue
+        if s.startswith(("{{", "}}", "|", "[[", "<!--", "==")):
+            continue
+        body.append(s)
+    text = "\n".join(body)
+    text = re.sub(r"\{\{[^}]+\}\}", "", text)
+    text = re.sub(r"\[\[(?:[^|\]]+\|)?([^\]]+)\]\]", r"\1", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r" *\n *", "\n", text).strip()
+    if not text:
+        raise RuntimeError("SUTRA-EN: no translation body parsed")
+    return text
+
+
+def build_sutra_en() -> None:
+    print("[sutra-en] downloading...")
+    raw = _fetch(SUTRA_EN_RAW_URL)
+    text = _clean_wikisource_translation(raw)
+    verses: list[dict] = [{
+        "id": "sutra.heart-sutra-en.1",
+        "tradition": "sutra",
+        "lang": "en",
+        "work": "heart-sutra-en",
+        "canonical_ref": {"chapter": 1, "verse_start": 1},
+        "display_ref": {"en": "Heart Sutra", "zh-Hans": "心经"},
+        "text": text,
+        "source": {
+            "provider": "Wikisource",
+            "license": "Creative Commons Attribution-ShareAlike",
+            "attribution": "Shorter Prajnaparamita Hrdaya Sutra, Wikisource translation",
+        },
+        "checksum_sha256": _sha256(text),
+        "inclusion_mode": "bundled",
+        "sensitivity": "sacred_exact_quote",
+    }]
+    meta = {
+        "tradition": "sutra",
+        "work": "heart-sutra-en",
+        "lang": "en",
+        "provider": "Wikisource",
+        "source_url": SUTRA_EN_RAW_URL,
+        "license": "Creative Commons Attribution-ShareAlike",
+        "attribution": "Shorter Prajnaparamita Hrdaya Sutra, Wikisource translation",
+        "edition_id": "wikisource-heart-sutra-en",
+        "inclusion_mode": "bundled",
+        "sensitivity": "sacred_exact_quote",
+        "note": "Bundled with source attribution; this is an English translation, not the Xuanzang Chinese text.",
+    }
+    _write_pack("heart-sutra-en", verses, meta)
+
+
+# ---------- Quran translations ----------
+
+def _parse_tanzil_translation(raw: str, code: str) -> list[tuple[int, int, str]]:
+    verses: list[tuple[int, int, str]] = []
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split("|", 2)
+        if len(parts) != 3:
+            raise RuntimeError(f"QURAN {code}: malformed translation row")
+        surah = int(parts[0])
+        ayah = int(parts[1])
+        text = parts[2].strip()
+        if not text:
+            raise RuntimeError(f"QURAN {code}: empty translation at {surah}:{ayah}")
+        verses.append((surah, ayah, text))
+    if len(verses) != 6236:
+        raise RuntimeError(f"QURAN {code}: expected 6236 ayat, found {len(verses)}")
+    return verses
+
+
+def build_quran_translation(
+    *,
+    pack_name: str,
+    work: str,
+    lang: str,
+    url: str,
+    provider_name: str,
+    attribution: str,
+) -> None:
+    print(f"[{pack_name}] downloading...")
+    raw = _fetch(url)
+    verses: list[dict] = []
+    for surah, ayah, text in _parse_tanzil_translation(raw, work):
+        vid = f"quran.{work}.{surah}.{ayah}"
+        verses.append({
+            "id": vid,
+            "tradition": "quran",
+            "lang": lang,
+            "work": work,
+            "canonical_ref": {"chapter": surah, "verse_start": ayah},
+            "display_ref": {"en": f"Quran {surah}:{ayah}", "zh-Hans": f"古兰经 {surah}:{ayah}"},
+            "text": text,
+            "source": {
+                "provider": "Tanzil Quran Translations",
+                "license": "Tanzil translations terms: non-commercial use with attribution",
+                "attribution": attribution,
+            },
+            "checksum_sha256": _sha256(text),
+            "inclusion_mode": "bundled",
+            "sensitivity": "sacred_exact_quote",
+        })
+    meta = {
+        "tradition": "quran",
+        "work": work,
+        "lang": lang,
+        "provider": "Tanzil Quran Translations",
+        "source_url": url,
+        "license": "Tanzil translations terms: non-commercial use with attribution",
+        "attribution": attribution,
+        "edition_id": provider_name,
+        "inclusion_mode": "bundled",
+        "sensitivity": "sacred_exact_quote",
+        "note": "Bundled translation data retains Tanzil attribution and non-commercial translation terms.",
+    }
+    _write_pack(pack_name, verses, meta)
+
+
+def build_quran_pickthall() -> None:
+    build_quran_translation(
+        pack_name="quran-pickthall",
+        work="pickthall",
+        lang="en",
+        url=QURAN_PICKTHALL_URL,
+        provider_name="tanzil-en.pickthall",
+        attribution="Quran English translation by Mohammed Marmaduke William Pickthall, Tanzil",
+    )
+
+
+def build_quran_majian() -> None:
+    build_quran_translation(
+        pack_name="quran-majian",
+        work="majian",
+        lang="zh-Hans",
+        url=QURAN_MAJIAN_URL,
+        provider_name="tanzil-zh.jian",
+        attribution="古兰经中文译本（马坚），Tanzil",
+    )
+
+
 # ---------- entrypoint ----------
 
 def main() -> int:
-    targets = sys.argv[1:] or ["kjv", "dao", "sutra"]
+    targets = sys.argv[1:] or ["kjv", "cuv-s", "dao", "dao-en", "sutra", "sutra-en", "quran-en", "quran-zh"]
     if "kjv" in targets:
         build_kjv()
+    if "cuv-s" in targets:
+        build_cuv_s()
     if "dao" in targets:
         build_dao()
+    if "dao-en" in targets:
+        build_dao_legge()
     if "sutra" in targets:
         build_sutra()
+    if "sutra-en" in targets:
+        build_sutra_en()
+    if "quran-en" in targets:
+        build_quran_pickthall()
+    if "quran-zh" in targets:
+        build_quran_majian()
     return 0
 
 
