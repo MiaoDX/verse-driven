@@ -1,0 +1,15 @@
+{
+  "attribution": "Quran English translation by Mohammed Marmaduke William Pickthall, Tanzil",
+  "build_date": "2026-05-04",
+  "edition_id": "tanzil-en.pickthall",
+  "inclusion_mode": "bundled",
+  "lang": "en",
+  "license": "Tanzil translations terms: non-commercial use with attribution",
+  "note": "Bundled translation data retains Tanzil attribution and non-commercial translation terms.",
+  "provider": "Tanzil Quran Translations",
+  "sensitivity": "sacred_exact_quote",
+  "source_url": "https://tanzil.net/trans/en.pickthall",
+  "tradition": "quran",
+  "verse_count": 6236,
+  "work": "pickthall"
+}

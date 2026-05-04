@@ -18,10 +18,15 @@ const (
 
 // Work identifiers used in canonical references.
 const (
-	WorkKJV        = "KJV"
-	WorkDaodejing  = "daodejing"
-	WorkHeartSutra = "heart-sutra"
-	WorkQuran      = "quran"
+	WorkKJV            = "KJV"
+	WorkCUVS           = "CUV-S"
+	WorkDaodejing      = "daodejing"
+	WorkDaoLegge       = "legge"
+	WorkHeartSutra     = "heart-sutra"
+	WorkHeartSutraEn   = "heart-sutra-en"
+	WorkQuran          = "quran"
+	WorkQuranPickthall = "pickthall"
+	WorkQuranMajian    = "majian"
 )
 
 // Reference is a parsed scripture reference.
@@ -34,6 +39,7 @@ const (
 type Reference struct {
 	Tradition  string
 	Work       string
+	Lang       string
 	Book       string
 	Chapter    int
 	VerseStart int

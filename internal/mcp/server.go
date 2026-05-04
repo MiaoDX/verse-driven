@@ -294,9 +294,6 @@ func (s *Server) lookupByRef(ref string) (schema.Verse, error) {
 	}
 	v, ok := s.registry.Lookup(id)
 	if !ok {
-		if r.Tradition == resolver.TraditionSutra || r.Tradition == resolver.TraditionQuran {
-			return schema.Verse{}, fmt.Errorf("%w: %s", packs.ErrNotBundled, r.Tradition)
-		}
 		return schema.Verse{}, fmt.Errorf("verse not found: %s", id)
 	}
 	return v, nil
@@ -444,4 +441,3 @@ func textContent(s string) map[string]any {
 		"content": []map[string]any{{"type": "text", "text": s}},
 	}
 }
-

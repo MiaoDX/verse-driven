@@ -9,14 +9,23 @@ import (
 	"github.com/MiaoDX/verse-driven/internal/schema"
 )
 
-// TestRegistryLoaded ensures all three packs were registered at init.
+// TestRegistryLoaded ensures all bilingual packs were registered at init.
 func TestRegistryLoaded(t *testing.T) {
 	r := All()
 	if r == nil {
 		t.Fatal("registry nil")
 	}
 	got := r.Names()
-	want := []PackName{PackBibleKJV, PackDaoDeJing, PackHeartSutra}
+	want := []PackName{
+		PackBibleCUVS,
+		PackBibleKJV,
+		PackDaoDeJing,
+		PackDaoLegge,
+		PackHeartSutra,
+		PackHeartSutraEn,
+		PackQuranMajian,
+		PackQuranPickthall,
+	}
 	if len(got) != len(want) {
 		t.Fatalf("Names: got %d packs, want %d", len(got), len(want))
 	}
@@ -44,6 +53,23 @@ func TestKJVCounts(t *testing.T) {
 	}
 }
 
+func TestCUVSCounts(t *testing.T) {
+	pack := All().Pack(PackBibleCUVS)
+	if pack == nil {
+		t.Fatal("PackBibleCUVS missing")
+	}
+	if pack.Meta.Tradition != "bible" || pack.Meta.Work != "CUV-S" || pack.Meta.Lang != "zh-Hans" {
+		t.Errorf("metadata: got tradition=%q work=%q lang=%q", pack.Meta.Tradition, pack.Meta.Work, pack.Meta.Lang)
+	}
+	const want = 31100
+	if got := len(pack.Verses()); got != want {
+		t.Errorf("CUV-S verse count: got %d, want %d", got, want)
+	}
+	if got := len(pack.Meta.Books); got != 66 {
+		t.Errorf("CUV-S book count in metadata: got %d, want 66", got)
+	}
+}
+
 func TestDaoCounts(t *testing.T) {
 	pack := All().Pack(PackDaoDeJing)
 	if pack == nil {
@@ -51,6 +77,19 @@ func TestDaoCounts(t *testing.T) {
 	}
 	if got := len(pack.Verses()); got != 81 {
 		t.Errorf("Dao chapter count: got %d, want 81", got)
+	}
+}
+
+func TestDaoLeggeCounts(t *testing.T) {
+	pack := All().Pack(PackDaoLegge)
+	if pack == nil {
+		t.Fatal("PackDaoLegge missing")
+	}
+	if got := len(pack.Verses()); got != 81 {
+		t.Errorf("Dao Legge chapter count: got %d, want 81", got)
+	}
+	if pack.Meta.Lang != "en" {
+		t.Errorf("Dao Legge lang: got %q, want en", pack.Meta.Lang)
 	}
 }
 
@@ -64,6 +103,41 @@ func TestHeartSutraBundled(t *testing.T) {
 	}
 	if pack.Meta.InclusionMode != "bundled" {
 		t.Errorf("HeartSutra inclusion_mode: got %q, want %q", pack.Meta.InclusionMode, "bundled")
+	}
+}
+
+func TestHeartSutraEnBundled(t *testing.T) {
+	pack := All().Pack(PackHeartSutraEn)
+	if pack == nil {
+		t.Fatal("PackHeartSutraEn missing")
+	}
+	if got := len(pack.Verses()); got != 1 {
+		t.Errorf("HeartSutraEn verse count: got %d, want 1", got)
+	}
+	if pack.Meta.Lang != "en" {
+		t.Errorf("HeartSutraEn lang: got %q, want en", pack.Meta.Lang)
+	}
+}
+
+func TestQuranTranslationCounts(t *testing.T) {
+	cases := []struct {
+		name PackName
+		lang string
+	}{
+		{PackQuranPickthall, "en"},
+		{PackQuranMajian, "zh-Hans"},
+	}
+	for _, c := range cases {
+		pack := All().Pack(c.name)
+		if pack == nil {
+			t.Fatalf("%s missing", c.name)
+		}
+		if got := len(pack.Verses()); got != 6236 {
+			t.Errorf("%s verse count: got %d, want 6236", c.name, got)
+		}
+		if pack.Meta.Lang != c.lang {
+			t.Errorf("%s lang: got %q, want %q", c.name, pack.Meta.Lang, c.lang)
+		}
 	}
 }
 
@@ -81,10 +155,15 @@ func TestSpotChecksums(t *testing.T) {
 		// the very last verse of the canon.
 		{"bible.kjv.genesis.1.1", "6f785a86b2716dcc5a48caa0de944396ba871d5c7f3bf776993648335fcb2bb2"},
 		{"bible.kjv.john.3.16", "8473c0b1c7664945528317faf77351258eb79f8b11ba821ef76d7e916cde711a"},
+		{"bible.cuv-s.john.3.16", "eb9377734c9de55a5fb47ff21405fbd9fc7aac478ac88339491348fa117f9509"},
 		{"bible.kjv.revelation.22.21", "76128832e1fddeeda339fb4424682d629e372e7965425ba19efbf31038b54ab2"},
 		// Dao chapter 11 is the README example ("三十辐共一毂...").
 		{"dao.daodejing.11.1", "81ba9b4c9a51241154bf5f1c7a8b37d16234717b4f29c9522b58d04ad73d95b3"},
+		{"dao.legge.11.1", "8ef8185a229525015081a5d3bcb5150bdcc0cd13d9a58d70efffb9141f2546f9"},
 		{"sutra.heart-sutra.1", "08cd20f4996c4b7f44b5978fbc65f6d82e738a3f3a01b2715303d7d94852fff2"},
+		{"sutra.heart-sutra-en.1", "b3f7511dba60c53a7a8f536d8b749bceea7cb1123218f37af8145bbf1fef2e95"},
+		{"quran.pickthall.2.255", "f174338173480fd74890bc2dcc0d605c6f418a9923abb17d4e76bee129a5cd64"},
+		{"quran.majian.2.255", "afe17706c0849792de579c9382c285c073fb09e4102a5791414b4d08456e5475"},
 	}
 	r := All()
 	for _, c := range cases {

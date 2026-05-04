@@ -7,10 +7,9 @@ STATICCHECK_VERSION := v0.6.1
 
 all: lint verify-packs test build
 
-# Rebuild the bundled packs from upstream sources (KJV from Project
-# Gutenberg, 道德经 from Project Gutenberg). Run after upstream regenerations
-# or whenever the JSONL format changes. Requires Python 3.11+ and
-# opencc-python-reimplemented for the dao pack.
+# Rebuild bundled packs from upstream sources. Run after upstream
+# regenerations or whenever the JSONL format changes. Requires Python 3.11+;
+# opencc-python-reimplemented is required for the zh-Hans Dao/Sutra targets.
 packs:
 	python3 scripts/build_packs.py
 

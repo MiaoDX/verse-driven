@@ -19,7 +19,8 @@ stdio MCP, CLI commands, and agent hooks.
 Current v0.1.0 status:
 
 - Released binaries for macOS arm64, macOS x86_64, and Linux x86_64.
-- Bundled packs: KJV Bible, 道德经, and 心经.
+- Bundled packs: Bible (KJV + CUV-S), 道德经 (Chinese + Legge English),
+  心经 (Chinese + English), and Quran (Pickthall English + Ma Jian Chinese).
 - Adapter support: Claude Code and Codex.
 - Safety gate: one-turn injection lifecycle tests and coding-quality benchmark
   passed for v0.1.0.
@@ -80,8 +81,12 @@ Claude Code slash commands:
 ```text
 /bible John 3:13
 /bible 约翰福音 3:16
+/dao 11
 /dao 第十一章
 /sutra 心经
+/sutra Heart Sutra
+/quran 2:255
+/quran 古兰经 2:255
 ```
 
 Codex inline markers:
@@ -96,7 +101,11 @@ Direct CLI lookup:
 
 ```bash
 scripture-mcp lookup "John 3:13" --format=json
+scripture-mcp lookup "约翰福音 3:16" --format=json
+scripture-mcp lookup "dao 11" --format=text
 scripture-mcp lookup "道德经第十一章" --format=text
+scripture-mcp lookup "Quran 2:255" --format=text
+scripture-mcp lookup "古兰经 2:255" --format=text
 scripture-mcp recap --terminal
 scripture-mcp recap --learning --first-letter
 ```
@@ -229,10 +238,13 @@ Codex transcript.
 | Pack | Source | State |
 |---|---|---|
 | KJV Bible | [Project Gutenberg eBook #10](https://www.gutenberg.org/ebooks/10) | Bundled, 31,102 verses |
+| Chinese Union Version, Simplified | [open-bibles](https://github.com/seven1m/open-bibles) | Bundled, 31,100 verses |
 | 道德经 | [Project Gutenberg eBook #7337](https://www.gutenberg.org/ebooks/7337) | Bundled, 81 chapters |
+| Tao Te Ching, Legge English | [Internet Classics Archive](https://classics.mit.edu/Lao/taote.html) | Bundled, 81 chapters |
 | 心经 | [CBETA XML P5 T0251](https://cbetaonline.dila.edu.tw/zh/T0251_001) | Bundled, 1 complete text |
-| Quran | planned | Resolver only; no bundled text |
-| 中文圣经 | planned | Needs licensing work |
+| Heart Sutra, English | [Wikisource](https://en.wikisource.org/wiki/Translation:Shorter_Praj%C3%B1%C4%81p%C4%81ramit%C4%81_H%E1%B9%9Bdaya_S%C5%ABtra) | Bundled, 1 complete text |
+| Quran, Pickthall English | [Tanzil](https://tanzil.net/trans/) | Bundled, 6,236 ayat; non-commercial translation terms |
+| Quran, Ma Jian Chinese | [Tanzil](https://tanzil.net/trans/) | Bundled, 6,236 ayat; non-commercial translation terms |
 
 Each bundled entry stores a SHA-256 checksum over the text bytes. CI verifies
 that pack text and checksum metadata stay in sync.
@@ -278,8 +290,8 @@ See [`CHANGELOG.md`](./CHANGELOG.md) for release notes.
 
 Useful next work:
 
-- Quran pack with clear source provenance and attribution.
-- Chinese Bible pack research.
+- Broader translation-source licensing review.
+- Optional explicit `--lang` selection for recap/random workflows.
 - Homebrew formula.
 - Release workflow automation.
 - Additional lifecycle probes for other MCP-compatible agents.

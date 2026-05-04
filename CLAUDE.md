@@ -55,8 +55,13 @@ internal/schema/        Verse struct + JSON Schema (the contract every pack obey
 internal/resolver/      free-form reference parser ("John 3:16", "道德经 11", ...)
 internal/packs/         embed.FS-backed pack data + registry
   bible-kjv/
+  bible-cuv-s/
   dao-de-jing/
+  dao-legge/
   heart-sutra/
+  heart-sutra-en/
+  quran-pickthall/
+  quran-majian/
 internal/mcp/           stdio MCP server (issue #4)
 internal/cli/           CLI subcommands (issue #4)
 internal/injector/      inject-once envelope helpers (issues #5/#6)

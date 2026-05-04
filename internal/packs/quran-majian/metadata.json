@@ -1,0 +1,15 @@
+{
+  "attribution": "古兰经中文译本（马坚），Tanzil",
+  "build_date": "2026-05-04",
+  "edition_id": "tanzil-zh.jian",
+  "inclusion_mode": "bundled",
+  "lang": "zh-Hans",
+  "license": "Tanzil translations terms: non-commercial use with attribution",
+  "note": "Bundled translation data retains Tanzil attribution and non-commercial translation terms.",
+  "provider": "Tanzil Quran Translations",
+  "sensitivity": "sacred_exact_quote",
+  "source_url": "https://tanzil.net/trans/zh.jian",
+  "tradition": "quran",
+  "verse_count": 6236,
+  "work": "majian"
+}

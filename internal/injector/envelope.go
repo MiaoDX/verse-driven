@@ -45,11 +45,19 @@ func Envelope(v schema.Verse) string {
 }
 
 // DisplayRef formats a verse's canonical reference for human display.
-// Prefers DisplayRef["en"] when set; falls back to a tradition-specific
-// rendering otherwise.
+// Prefers the verse language's DisplayRef when set, then English, then
+// Simplified Chinese, and finally a tradition-specific rendering.
 func DisplayRef(v schema.Verse) string {
 	if v.DisplayRef != nil {
+		if v.Lang != "" {
+			if s, ok := v.DisplayRef[v.Lang]; ok && s != "" {
+				return s
+			}
+		}
 		if s, ok := v.DisplayRef["en"]; ok && s != "" {
+			return s
+		}
+		if s, ok := v.DisplayRef["zh-Hans"]; ok && s != "" {
 			return s
 		}
 	}

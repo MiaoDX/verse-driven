@@ -220,10 +220,13 @@ func TestSlashMarkerTraditionsLifecycle(t *testing.T) {
 		ref    string
 	}{
 		{"/bible John 3:16", "John 3:16"},
-		{"/dao 11", "道德经 11"},
-		// sutra and quran ship api_only in v0.1, so the hook soft-fails
-		// to no-envelope; the lifecycle invariant is still preserved
-		// (no envelope = no leak possible) but there's nothing to leak.
+		{"/bible 约翰福音 3:16", "约翰福音 3:16"},
+		{"/dao 11", "dao 11"},
+		{"/dao 道德经第十一章", "道德经 11"},
+		{"/sutra Heart Sutra", "Heart Sutra"},
+		{"/sutra 心经", "心经"},
+		{"/quran 2:255", "Quran 2:255"},
+		{"/quran 古兰经 2:255", "古兰经 2:255"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.marker, func(t *testing.T) {

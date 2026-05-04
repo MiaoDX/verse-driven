@@ -1,4 +1,4 @@
-// Package packs holds embedded verse data (KJV, 道德经, 心经, ...).
+// Package packs holds embedded verse data (Bible, Dao, Quran, 心经, ...).
 //
 // On import, init() decompresses each pack's verses.jsonl.gz, materializes
 // schema.Verse values from compact JSONL rows + metadata.json, and indexes
@@ -9,7 +9,8 @@
 //	{"id":"bible.kjv.john.3.16","c":3,"v":16,"t":"...","s":"<hex64>"}
 //
 // Optional fields: "ve" (verse_end), "b" (book display name; defaults to
-// metadata.books[<slug>] for multi-book traditions). Pack-shared fields
+// metadata.books[<slug>] for multi-book traditions), and "d" (per-language
+// display_ref strings). Pack-shared fields
 // (tradition, work, lang, source.*, inclusion_mode, sensitivity) live in
 // metadata.json so the JSONL stays small enough to fit the 6 MB budget.
 package packs
@@ -28,16 +29,21 @@ import (
 	"github.com/MiaoDX/verse-driven/internal/schema"
 )
 
-//go:embed all:bible-kjv all:dao-de-jing all:heart-sutra
+//go:embed all:bible-kjv all:bible-cuv-s all:dao-de-jing all:dao-legge all:heart-sutra all:heart-sutra-en all:quran-pickthall all:quran-majian
 var fs embed.FS
 
 // PackName identifies an embedded pack on disk.
 type PackName string
 
 const (
-	PackBibleKJV    PackName = "bible-kjv"
-	PackDaoDeJing   PackName = "dao-de-jing"
-	PackHeartSutra  PackName = "heart-sutra"
+	PackBibleKJV       PackName = "bible-kjv"
+	PackBibleCUVS      PackName = "bible-cuv-s"
+	PackDaoDeJing      PackName = "dao-de-jing"
+	PackDaoLegge       PackName = "dao-legge"
+	PackHeartSutra     PackName = "heart-sutra"
+	PackHeartSutraEn   PackName = "heart-sutra-en"
+	PackQuranPickthall PackName = "quran-pickthall"
+	PackQuranMajian    PackName = "quran-majian"
 )
 
 // Metadata is the parsed contents of a pack's metadata.json.
@@ -61,10 +67,10 @@ type Metadata struct {
 
 // Pack is one loaded pack: metadata + indexed verses.
 type Pack struct {
-	Name     PackName
-	Meta     Metadata
-	verses   []schema.Verse
-	byID     map[string]int // id -> index in verses
+	Name   PackName
+	Meta   Metadata
+	verses []schema.Verse
+	byID   map[string]int // id -> index in verses
 }
 
 // Verses returns all verses in pack order.
@@ -148,7 +154,16 @@ func init() {
 
 func loadAll() (*Registry, error) {
 	r := &Registry{packs: make(map[PackName]*Pack)}
-	for _, name := range []PackName{PackBibleKJV, PackDaoDeJing, PackHeartSutra} {
+	for _, name := range []PackName{
+		PackBibleKJV,
+		PackBibleCUVS,
+		PackDaoDeJing,
+		PackDaoLegge,
+		PackHeartSutra,
+		PackHeartSutraEn,
+		PackQuranPickthall,
+		PackQuranMajian,
+	} {
 		p, err := loadPack(name)
 		if err != nil {
 			return nil, fmt.Errorf("pack %s: %w", name, err)
@@ -190,13 +205,14 @@ func loadPack(name PackName) (*Pack, error) {
 }
 
 type compactRow struct {
-	ID         string `json:"id"`
-	Chapter    int    `json:"c"`
-	Verse      int    `json:"v"`
-	VerseEnd   int    `json:"ve,omitempty"`
-	Book       string `json:"b,omitempty"`
-	Text       string `json:"t"`
-	Checksum   string `json:"s"`
+	ID         string            `json:"id"`
+	Chapter    int               `json:"c"`
+	Verse      int               `json:"v"`
+	VerseEnd   int               `json:"ve,omitempty"`
+	Book       string            `json:"b,omitempty"`
+	DisplayRef map[string]string `json:"d,omitempty"`
+	Text       string            `json:"t"`
+	Checksum   string            `json:"s"`
 }
 
 func parseRows(r io.Reader, meta Metadata) ([]schema.Verse, map[string]int, error) {
@@ -241,6 +257,7 @@ func parseRows(r io.Reader, meta Metadata) ([]schema.Verse, map[string]int, erro
 				VerseStart: row.Verse,
 				VerseEnd:   row.VerseEnd,
 			},
+			DisplayRef:     row.DisplayRef,
 			Text:           row.Text,
 			Source:         source,
 			ChecksumSHA256: row.Checksum,

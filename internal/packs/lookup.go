@@ -10,8 +10,8 @@ import (
 )
 
 // ErrNotBundled signals the requested reference resolved to a tradition
-// that is shipped api-only in this build (heart-sutra, quran). Callers
-// can distinguish this from a hard "id not in pack" miss with errors.Is.
+// that is shipped api-only in this build. Callers can distinguish this
+// from a hard "id not in pack" miss with errors.Is.
 var ErrNotBundled = errors.New("packs: verse not bundled in this build")
 
 // LookupReference maps a parsed resolver.Reference to a pack verse id and
@@ -24,9 +24,6 @@ func LookupReference(r resolver.Reference) (schema.Verse, error) {
 	}
 	v, ok := All().Lookup(id)
 	if !ok {
-		if r.Tradition == resolver.TraditionSutra || r.Tradition == resolver.TraditionQuran {
-			return schema.Verse{}, fmt.Errorf("%w: %s", ErrNotBundled, r.Tradition)
-		}
 		return schema.Verse{}, fmt.Errorf("verse not found: %s", id)
 	}
 	return v, nil
@@ -46,7 +43,11 @@ func ReferenceID(r resolver.Reference) (string, error) {
 		if r.Chapter < 1 || verse < 1 {
 			return "", fmt.Errorf("bible reference must include chapter and verse")
 		}
-		return fmt.Sprintf("bible.kjv.%s.%d.%d", bookSlug(r.Book), r.Chapter, verse), nil
+		work := "kjv"
+		if r.Work == resolver.WorkCUVS || r.Lang == "zh-Hans" {
+			work = "cuv-s"
+		}
+		return fmt.Sprintf("bible.%s.%s.%d.%d", work, bookSlug(r.Book), r.Chapter, verse), nil
 	case resolver.TraditionDao:
 		if r.Chapter < 1 {
 			return "", fmt.Errorf("dao reference missing chapter")
@@ -54,17 +55,29 @@ func ReferenceID(r resolver.Reference) (string, error) {
 		if verse < 1 {
 			verse = 1
 		}
-		return fmt.Sprintf("dao.daodejing.%d.%d", r.Chapter, verse), nil
+		work := "daodejing"
+		if r.Work == resolver.WorkDaoLegge || r.Lang == "en" {
+			work = "legge"
+		}
+		return fmt.Sprintf("dao.%s.%d.%d", work, r.Chapter, verse), nil
 	case resolver.TraditionSutra:
 		if verse < 1 {
 			verse = 1
 		}
-		return fmt.Sprintf("sutra.heart-sutra.%d", verse), nil
+		work := "heart-sutra"
+		if r.Work == resolver.WorkHeartSutraEn || r.Lang == "en" {
+			work = "heart-sutra-en"
+		}
+		return fmt.Sprintf("sutra.%s.%d", work, verse), nil
 	case resolver.TraditionQuran:
 		if r.Chapter < 1 || verse < 1 {
 			return "", fmt.Errorf("quran reference must include surah and verse")
 		}
-		return fmt.Sprintf("quran.quran.%d.%d", r.Chapter, verse), nil
+		work := "pickthall"
+		if r.Work == resolver.WorkQuranMajian || r.Lang == "zh-Hans" {
+			work = "majian"
+		}
+		return fmt.Sprintf("quran.%s.%d.%d", work, r.Chapter, verse), nil
 	}
 	return "", fmt.Errorf("unsupported tradition: %s", r.Tradition)
 }

@@ -39,9 +39,14 @@ func TestReferenceID(t *testing.T) {
 			want: "sutra.heart-sutra.1",
 		},
 		{
-			name: "quran follows surah:verse",
-			ref:  resolver.Reference{Tradition: "quran", Work: "quran", Chapter: 2, VerseStart: 255},
-			want: "quran.quran.2.255",
+			name: "quran English follows surah:verse",
+			ref:  resolver.Reference{Tradition: "quran", Work: resolver.WorkQuranPickthall, Chapter: 2, VerseStart: 255},
+			want: "quran.pickthall.2.255",
+		},
+		{
+			name: "quran Chinese follows surah:verse",
+			ref:  resolver.Reference{Tradition: "quran", Work: resolver.WorkQuranMajian, Chapter: 2, VerseStart: 255},
+			want: "quran.majian.2.255",
 		},
 	}
 	for _, c := range cases {
@@ -118,10 +123,18 @@ func TestLookupReferenceSutraFound(t *testing.T) {
 	}
 }
 
-func TestLookupReferenceQuranNotBundled(t *testing.T) {
-	_, err := LookupReference(resolver.Reference{Tradition: "quran", Work: "quran", Chapter: 2, VerseStart: 255})
-	if !errors.Is(err, ErrNotBundled) {
-		t.Errorf("got %v, want ErrNotBundled", err)
+func TestLookupReferenceQuranFound(t *testing.T) {
+	v, err := LookupReference(resolver.Reference{
+		Tradition:  "quran",
+		Work:       resolver.WorkQuranPickthall,
+		Chapter:    2,
+		VerseStart: 255,
+	})
+	if err != nil {
+		t.Fatalf("LookupReference err: %v", err)
+	}
+	if v.ID != "quran.pickthall.2.255" {
+		t.Errorf("got id %q", v.ID)
 	}
 }
 

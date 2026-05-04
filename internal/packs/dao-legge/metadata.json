@@ -1,0 +1,14 @@
+{
+  "attribution": "Tao Te Ching, translated by James Legge (1891), Internet Classics Archive text",
+  "build_date": "2026-05-04",
+  "edition_id": "legge-1891",
+  "inclusion_mode": "bundled",
+  "lang": "en",
+  "license": "Public domain source text",
+  "provider": "Internet Classics Archive",
+  "sensitivity": "sacred_exact_quote",
+  "source_url": "https://classics.mit.edu/Lao/taote.mb.txt",
+  "tradition": "dao",
+  "verse_count": 81,
+  "work": "legge"
+}

@@ -54,8 +54,8 @@ func TestRecapBibleHasAttribution(t *testing.T) {
 	if !strings.Contains(s, "📖") {
 		t.Errorf("recap output missing scripture marker: %s", s)
 	}
-	if !strings.Contains(s, "King James Version") {
-		t.Errorf("bible recap missing KJV attribution: %s", s)
+	if !strings.Contains(s, "King James Version") && !strings.Contains(s, "Chinese Union Version") {
+		t.Errorf("bible recap missing known Bible attribution")
 	}
 }
 
